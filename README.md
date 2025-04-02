@@ -10,7 +10,9 @@ Keywords:
 - MMD loss
  
 
-`python3.12`
+`python3.12 -m venv .venv`
+`source .venv/bin/activate`
+`pip install -r reqs.txt`
 
 - datasets/
 - plots/
@@ -21,7 +23,7 @@ Keywords:
         - `plotter.py`
             - reconstruction, rec + latent
             - circuit model (qml draw)
-        - `trainer.py``
+        - `trainer.py`
             - train iqp
             - train autoencoder
     - autoencoders/
