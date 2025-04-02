@@ -1,7 +1,7 @@
-# src/datasets/mnist.py
 import tensorflow_datasets as tfds
 import tensorflow as tf
 from base import BaseDataset
+from matplotlib import pyplot as plt
 
 class MNISTDataset(BaseDataset):
     def __init__(self, split='train', num_examples=None, batch_size=32, image_size=(28, 28)):
