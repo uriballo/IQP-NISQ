@@ -1,15 +1,18 @@
 from flax import linen as nn
-from jax import random
+from jax import random, lax
 import jax.numpy as jnp
+import jax
 
+# --- Binary Quantizer Function ---
 def binary_quantizer(rng, logits):
     """Binary quantization using Bernoulli sampling."""
     probs = nn.sigmoid(logits)  # Convert logits to probabilities
     binary_sample = random.bernoulli(rng, probs).astype(jnp.float32)  # Sample 0 or 1
     # Straight-through estimator for gradients
-    binary_latent = binary_sample + probs - jax.lax.stop_gradient(probs)
+    binary_latent = binary_sample + probs - lax.stop_gradient(probs)
     return binary_latent
 
+# --- Model Definitions ---
 class Encoder(nn.Module):
     """Binary VAE Encoder."""
     latents: int
@@ -18,7 +21,7 @@ class Encoder(nn.Module):
     def __call__(self, x):
         x = nn.Dense(500, name='fc1')(x)
         x = nn.relu(x)
-        logits = nn.Dense(self.latents, name='fc2_logits')(x)  # Output logits instead of mean/logvar
+        logits = nn.Dense(self.latents, name='fc2_logits')(x)  # Output logits for binary sampling
         return logits
 
 class Decoder(nn.Module):
@@ -42,7 +45,7 @@ class VAE(nn.Module):
         logits = self.encoder(x)
         z = binary_quantizer(z_rng, logits)
         recon_x = self.decoder(z)
-        return recon_x, logits
+        return recon_x, logits, z
 
     def generate(self, z):
         return nn.sigmoid(self.decoder(z))
