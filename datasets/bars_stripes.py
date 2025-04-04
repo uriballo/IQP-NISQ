@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from base import BaseDataset
+from datasets.base import BaseDataset
 from matplotlib import pyplot as plt
 
 class BarsStripesDataset(BaseDataset):

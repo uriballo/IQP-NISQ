@@ -6,6 +6,8 @@ from flax.training import train_state
 import optax
 import matplotlib.pyplot as plt
 import tensorflow_datasets as tfds
+from functools import partial
+import numpy as np
 
 class AutoencoderTrainState(train_state.TrainState):
     pass
@@ -34,7 +36,7 @@ class AutoencoderTrainer:
         self.state = AutoencoderTrainState.create(
             apply_fn=self.model.apply, params=params, tx=optimizer)
 
-    #@jax.jit
+    @partial(jax.jit, static_argnums=0)
     def train_step(self, state, batch, rng):
         """
         A single training step that computes the loss, gradients, and updates parameters.
@@ -79,7 +81,7 @@ class AutoencoderTrainer:
             if eval_fn is not None:
                 eval_fn(self.state.params)
 
-    def plot_reconstructions(self, test_ds, num_images=16):
+    def plot_reconstructions(self, test_ds, num_images=16, size=14):
         """
         Plots a grid of original images, reconstructions, and their latent codes.
         
@@ -102,8 +104,8 @@ class AutoencoderTrainer:
         # Compute latent code (binary quantization) from the logits
         
         # Reshape images to (28, 28) and latent codes to (1, latents) for visualization
-        images = images.reshape(-1, 28, 28)
-        recon_images = recon_images.reshape(-1, 28, 28)
+        images = images.reshape(-1, size, size)
+        recon_images = recon_images.reshape(-1, size, size)
         # z has shape (num_images, latent_dim); we visualize each as a horizontal row
         z_vis = z  # shape: (num_images, latent_dim)
         
@@ -119,9 +121,15 @@ class AutoencoderTrainer:
             axs[1, i].axis('off')
             if i == 0:
                 axs[1, i].set_ylabel("Reconstruction", fontsize=8)
-            # For latent code, reshape it as a 1 x latent_dim image and plot as a heatmap
-            axs[2, i].imshow(z_vis[i].reshape(1, -1), cmap='binary', aspect='auto')
-            axs[2, i].axis('off')
+            axs[2, i].imshow(z_vis[i].reshape(1, -1), cmap='gray', aspect=5)  # Adjust aspect ratio for clarity
+            #axs[2, i].set_xticks([])  
+            #axs[2, i].set_yticks([])
+            #axs[2, i].axis('on')
+
+            axs[2, i].set_xticks(np.arange(-0.5, z_vis.shape[1], 1), minor=True)  # Grid every 1 unit
+            axs[2, i].set_yticks([])
+            axs[2, i].grid(which="minor", color="gray", linestyle='-', linewidth=1)  # Thin black lines
+            axs[2, i].tick_params(which="both", bottom=False, left=False)
             if i == 0:
                 axs[2, i].set_ylabel("Latent Code", fontsize=8)
         plt.tight_layout()

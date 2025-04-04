@@ -19,23 +19,34 @@ class Encoder(nn.Module):
 
     @nn.compact
     def __call__(self, x):
-        x = nn.Dense(500, name='fc1')(x)
-        x = nn.relu(x)
-        logits = nn.Dense(self.latents, name='fc2_logits')(x)  # Output logits for binary sampling
+        x = nn.Dense(128, name='fc1')(x)
+        x = nn.leaky_relu(x)
+        x = nn.Dense(128, name='fc2')(x)
+        x = nn.leaky_relu(x)
+        x = nn.Dense(128, name='fc3')(x)
+        x = nn.leaky_relu(x)
+        x = nn.leaky_relu(x)
+        x = nn.Dense(128, name='fc4')(x)
+        x = nn.leaky_relu(x)
+        logits = nn.Dense(self.latents, name='fc_logits')(x)  # Output logits for binary sampling
         return logits
 
 class Decoder(nn.Module):
     """VAE Decoder."""
     @nn.compact
     def __call__(self, z):
-        z = nn.Dense(500, name='fc1')(z)
-        z = nn.relu(z)
-        z = nn.Dense(784, name='fc2')(z)
+        z = nn.Dense(128, name='fc1')(z)
+        z = nn.leaky_relu(z)
+        z = nn.Dense(128, name='fc2')(z)
+        z = nn.leaky_relu(z)
+        z = nn.Dense(128, name='fc3')(z)
+        z = nn.leaky_relu(z)
+        z = nn.Dense(196, name='fc4')(z)
         return z
 
 class VAE(nn.Module):
     """Full Binary VAE model."""
-    latents: int = 20
+    latents: int = 16
 
     def setup(self):
         self.encoder = Encoder(self.latents)

@@ -1,6 +1,6 @@
 import tensorflow_datasets as tfds
 import tensorflow as tf
-from base import BaseDataset
+from datasets.base import BaseDataset
 from matplotlib import pyplot as plt
 
 class MNISTDataset(BaseDataset):
