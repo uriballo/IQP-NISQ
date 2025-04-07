@@ -69,4 +69,4 @@ def get_latent_dataset(autoencoder, params, dataset, batch_size=128):
 def reconstruct(autoencoder, params, sample):
     rng = jax.random.PRNGKey(0)
 
-    return autoencoder.decoder.apply({'params': params}, sample, rng)
+    return autoencoder.apply({'params': params}, x=None, reconstruct= True, latent=sample, z_rng= rng)

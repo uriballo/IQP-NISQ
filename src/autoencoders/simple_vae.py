@@ -52,10 +52,14 @@ class VAE(nn.Module):
         self.encoder = Encoder(self.latents)
         self.decoder = Decoder()
 
-    def __call__(self, x, z_rng):
+    def __call__(self, x, z_rng, reconstruct = False, latent= None):
         #images, _ = x
         # Flatten images: [batch, H, W, C] -> [batch, H*W*C]
         #x = images.reshape(images.shape[0], -1)
+        if reconstruct:
+            print("reconstructing only based on ", latent)
+            return self.decoder(latent)
+
         logits = self.encoder(x)
         z = binary_quantizer(z_rng, logits)
         recon_x = self.decoder(z)
