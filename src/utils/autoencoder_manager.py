@@ -1,6 +1,8 @@
 import os
 import orbax.checkpoint
 from flax.training import orbax_utils
+import jax
+import numpy as np
 
 def save_model_state(state, ckpt_dir: str, step: int):
     """
@@ -43,3 +45,22 @@ def restore_model_state(ckpt_dir: str, state):
     print(f"Checkpoint restored from directory '{abs_ckpt_dir}'.")
     return restored_state
 
+def get_latent_dataset(autoencoder, params, dataset, batch_size=128):
+    latent_list = []
+    label_list = []
+    # Create an iterator over the TFDS dataset
+    for batch in dataset:
+        images, labels = batch
+        # Flatten images: (batch, 28, 28, 1) -> (batch, 784)
+        images = images.reshape(images.shape[0], -1)
+        # Generate an RNG for each batch; you can also reuse a fixed one if desired.
+        rng = jax.random.PRNGKey(0)
+        # Call autoencoder.apply. We assume it returns (reconstruction, logits, latent)
+        _, _, latent = autoencoder.apply({'params': params}, images, rng)
+        # Convert JAX arrays to NumPy arrays.
+        latent_list.append(np.array(latent).astype(int) )
+        label_list.append(np.array(labels))
+    # Concatenate all batch results into single arrays.
+    latents = np.concatenate(latent_list, axis=0)
+    labels = np.concatenate(label_list, axis=0)
+    return latents, labels

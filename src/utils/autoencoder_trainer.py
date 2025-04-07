@@ -33,10 +33,10 @@ class AutoencoderTrainer:
         init_rng, self.rng = jax.random.split(rng)
         dummy_input = jnp.ones(input_shape, jnp.float32)
         # Our model expects an extra RNG for sampling
-        params = self.model.init({'params': init_rng, 'dropout': init_rng}, dummy_input, self.rng)['params']
+        self.params = self.model.init({'params': init_rng, 'dropout': init_rng}, dummy_input, self.rng)['params']
         optimizer = optax.adam(learning_rate)
         self.state = AutoencoderTrainState.create(
-            apply_fn=self.model.apply, params=params, tx=optimizer)
+            apply_fn=self.model.apply, params=self.params, tx=optimizer)
 
     @partial(jax.jit, static_argnums=0)
     def train_step(self, state, batch, rng):
