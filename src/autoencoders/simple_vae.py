@@ -53,6 +53,9 @@ class VAE(nn.Module):
         self.decoder = Decoder()
 
     def __call__(self, x, z_rng):
+        #images, _ = x
+        # Flatten images: [batch, H, W, C] -> [batch, H*W*C]
+        #x = images.reshape(images.shape[0], -1)
         logits = self.encoder(x)
         z = binary_quantizer(z_rng, logits)
         recon_x = self.decoder(z)

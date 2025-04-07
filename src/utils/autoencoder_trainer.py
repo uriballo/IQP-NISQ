@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import tensorflow_datasets as tfds
 from functools import partial
 import numpy as np
+from src.utils.autoencoder_manager import save_model_state, restore_model_state
+import os
 
 class AutoencoderTrainState(train_state.TrainState):
     pass
@@ -41,6 +43,7 @@ class AutoencoderTrainer:
         """
         A single training step that computes the loss, gradients, and updates parameters.
         """
+        @jax.jit
         def loss_fn(params):
             recon_x, _, _ = self.model.apply({'params': params}, batch, rng)
             loss = jnp.mean((batch - recon_x) ** 2)
@@ -59,6 +62,7 @@ class AutoencoderTrainer:
         epoch_loss = 0.0
         num_batches = 0
 
+        # TODO: Adapt to be model-agnostic, i.e. don't flatten here
         for batch_data in train_iter:
             # Extract images (flatten them) from the batch; ignore labels
             images, _ = batch_data
@@ -71,15 +75,45 @@ class AutoencoderTrainer:
 
         return epoch_loss / num_batches if num_batches > 0 else float('nan')
 
-    def train(self, train_ds, batch_size, num_epochs, eval_fn=None):
+    def train(self, train_ds, batch_size, num_epochs, run_dir="results/run_default", save_best=True):
         """
         Runs the training loop for a given number of epochs.
+
+        Args:
+            train_ds: Training dataset.
+            batch_size: Batch size.
+            num_epochs: Number of epochs.
+            run_dir: Base directory where results (checkpoints, logs) for this run will be saved.
+            save_best: If True, save the best model (based on training loss); otherwise, save the final model.
         """
+        os.makedirs(run_dir, exist_ok=True)
+        best_metric = float('inf')  # lower is better
+        best_state = None
+
         for epoch in range(num_epochs):
             train_loss = self.train_epoch(train_ds, batch_size)
             print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {train_loss:.4f}")
-            if eval_fn is not None:
-                eval_fn(self.state.params)
+            
+            # Use train_loss as the evaluation metric.
+            metric = train_loss
+            print(f"Epoch {epoch + 1} - Eval Metric (Train Loss): {metric:.4f}")
+            
+            if save_best and metric < best_metric:
+                best_metric = metric
+                best_state = self.state
+
+        # After training ends, decide which state to save.
+        if save_best:
+            final_state = best_state
+            print(f"Saving best state with metric: {best_metric:.4f}")
+        else:
+            final_state = self.state
+            print("Saving final state (no best-state heuristic applied).")
+            
+        ckpt_path = save_model_state(final_state, run_dir, num_epochs)
+        print(f"Checkpoint saved at the end of training: {ckpt_path}")
+
+
 
     def plot_reconstructions(self, test_ds, num_images=16, size=14):
         """
@@ -122,9 +156,6 @@ class AutoencoderTrainer:
             if i == 0:
                 axs[1, i].set_ylabel("Reconstruction", fontsize=8)
             axs[2, i].imshow(z_vis[i].reshape(1, -1), cmap='gray', aspect=5)  # Adjust aspect ratio for clarity
-            #axs[2, i].set_xticks([])  
-            #axs[2, i].set_yticks([])
-            #axs[2, i].axis('on')
 
             axs[2, i].set_xticks(np.arange(-0.5, z_vis.shape[1], 1), minor=True)  # Grid every 1 unit
             axs[2, i].set_yticks([])
