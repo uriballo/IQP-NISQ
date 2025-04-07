@@ -51,16 +51,22 @@ def get_latent_dataset(autoencoder, params, dataset, batch_size=128):
     # Create an iterator over the TFDS dataset
     for batch in dataset:
         images, labels = batch
-        # Flatten images: (batch, 28, 28, 1) -> (batch, 784)
+
         images = images.reshape(images.shape[0], -1)
-        # Generate an RNG for each batch; you can also reuse a fixed one if desired.
+
         rng = jax.random.PRNGKey(0)
-        # Call autoencoder.apply. We assume it returns (reconstruction, logits, latent)
+
         _, _, latent = autoencoder.apply({'params': params}, images, rng)
-        # Convert JAX arrays to NumPy arrays.
+
         latent_list.append(np.array(latent).astype(int) )
         label_list.append(np.array(labels))
+
     # Concatenate all batch results into single arrays.
     latents = np.concatenate(latent_list, axis=0)
     labels = np.concatenate(label_list, axis=0)
     return latents, labels
+
+def reconstruct(autoencoder, params, sample):
+    rng = jax.random.PRNGKey(0)
+
+    return autoencoder.decoder.apply({'params': params}, sample, rng)
