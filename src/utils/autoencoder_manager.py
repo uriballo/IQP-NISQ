@@ -4,6 +4,7 @@ from flax.training import orbax_utils
 import jax
 import numpy as np
 import matplotlib.pyplot as plt
+import jax.numpy as jnp
 
 
 def save_model_state(state, ckpt_dir: str, step: int):
@@ -23,7 +24,7 @@ def save_model_state(state, ckpt_dir: str, step: int):
     checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     save_args = orbax_utils.save_args_from_target(state)
     
-    checkpointer.save(ckpt_path, state, save_args=save_args)
+    checkpointer.save(ckpt_path, state, save_args=save_args, force=True)
     print(f"Checkpoint saved at step {step} in directory '{ckpt_path}'")
     return ckpt_path 
 
@@ -58,10 +59,12 @@ def get_latent_dataset(autoencoder, params, dataset, batch_size=128):
         
         # Update the RNG for each batch
         rng, batch_rng = jax.random.split(rng)
-        
-        # Now the model expects the natural image shape
+        images = jax.device_put(np.array(images))  # tf.Tensor → JAX DeviceArray
+        #images = images.reshape((images.shape[0], -1))
+        images = jnp.reshape(images, (images.shape[0], -1))
+
         _, logits, latent = autoencoder.apply({'params': params}, images, batch_rng)
-        
+
         # Convert JAX arrays to numpy integers (or any desired type)
         latent_list.append(np.array(latent).astype(int))
         label_list.append(np.array(labels))

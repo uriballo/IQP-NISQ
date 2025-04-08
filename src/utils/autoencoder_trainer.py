@@ -32,7 +32,6 @@ class AutoencoderTrainer:
         # Split RNG for initialization
         init_rng, self.rng = jax.random.split(rng)
         dummy_input = jnp.ones(input_shape, jnp.float32)
-        # Our model expects an extra RNG for sampling
         self.params = self.model.init({'params': init_rng, 'dropout': init_rng}, dummy_input, self.rng)['params']
         optimizer = optax.adam(learning_rate)
         self.state = AutoencoderTrainState.create(
@@ -57,7 +56,6 @@ class AutoencoderTrainer:
         """
         Trains the model for one epoch.
         """
-        # Convert tf.data.Dataset to numpy iterator for convenience
         train_iter = tfds.as_numpy(train_ds)
         epoch_loss = 0.0
         num_batches = 0
@@ -66,6 +64,7 @@ class AutoencoderTrainer:
             images, labels = batch_data
 
             self.rng, step_rng = jax.random.split(self.rng)
+            images = jnp.reshape(images, (images.shape[0], -1))
             self.state, loss = self.train_step(self.state, images, step_rng)
             epoch_loss += loss
             num_batches += 1
@@ -91,7 +90,6 @@ class AutoencoderTrainer:
             train_loss = self.train_epoch(train_ds, batch_size)
             print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {train_loss:.4f}")
             
-            # Use train_loss as the evaluation metric.
             metric = train_loss
             print(f"Epoch {epoch + 1} - Eval Metric (Train Loss): {metric:.4f}")
             
@@ -99,7 +97,6 @@ class AutoencoderTrainer:
                 best_metric = metric
                 best_state = self.state
 
-        # After training ends, decide which state to save.
         if save_best:
             final_state = best_state
             print(f"Saving best state with metric: {best_metric:.4f}")
@@ -120,27 +117,19 @@ class AutoencoderTrainer:
             test_ds: A tf.data.Dataset containing the test split.
             num_images: Number of images to display.
         """
-        # Convert tf.data.Dataset to numpy iterator and take one batch
         test_iter = iter(tfds.as_numpy(test_ds))
         batch_data = next(test_iter)
         images, _ = batch_data
 
-        # Flatten images
         images = images.reshape(images.shape[0], -1)
-        # Use only the first num_images from the batch
         images = images[:num_images]
-        # Get reconstruction and latent logits from the model
         self.rng, sample_rng = jax.random.split(self.rng)
         recon_images, logits, z = self.model.apply({'params': self.state.params}, images, sample_rng)
-        # Compute latent code (binary quantization) from the logits
         
-        # Reshape images to (28, 28) and latent codes to (1, latents) for visualization
         images = images.reshape(-1, size, size)
         recon_images = recon_images.reshape(-1, size, size)
-        # z has shape (num_images, latent_dim); we visualize each as a horizontal row
         z_vis = z  # shape: (num_images, latent_dim)
         
-        # Plot original, reconstruction, and latent code in three rows
         n_cols = num_images
         fig, axs = plt.subplots(3, n_cols, figsize=(n_cols * 2, 6))
         for i in range(n_cols):

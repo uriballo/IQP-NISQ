@@ -20,7 +20,6 @@ class Encoder(nn.Module):
 
     @nn.compact
     def __call__(self, x):
-        x = jnp.reshape(x.shape[0], -1)
         x = nn.Dense(128, name='fc1')(x)
         x = nn.leaky_relu(x)
         x = nn.Dense(128, name='fc2')(x)
@@ -61,13 +60,12 @@ class VAE(nn.Module):
         logits = self.encoder(x)
         z = binary_quantizer(z_rng, logits)
         recon_x = self.decoder(z)
-        recon_x = jnp.reshape(recon_x, self.output_shape)
         return recon_x, logits, z
 
     def generate(self, z):
         z = self.decoder(z)
         z = jnp.reshape(z, self.output_shape)
-        return z #nn.sigmoid(z)
+        return z 
 
 def model(latents):
     return VAE(latents=latents)
