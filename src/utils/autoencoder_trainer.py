@@ -62,12 +62,9 @@ class AutoencoderTrainer:
         epoch_loss = 0.0
         num_batches = 0
 
-        # TODO: Adapt to be model-agnostic, i.e. don't flatten here
         for batch_data in train_iter:
-            # Extract images (flatten them) from the batch; ignore labels
-            images, _ = batch_data
-            # Flatten images: [batch, H, W, C] -> [batch, H*W*C]
-            images = images.reshape(images.shape[0], -1)
+            images, labels = batch_data
+
             self.rng, step_rng = jax.random.split(self.rng)
             self.state, loss = self.train_step(self.state, images, step_rng)
             epoch_loss += loss
