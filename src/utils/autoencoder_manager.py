@@ -3,6 +3,9 @@ import orbax.checkpoint
 from flax.training import orbax_utils
 import jax
 import numpy as np
+import matplotlib.pyplot as plt
+import jax.numpy as jnp
+
 
 def save_model_state(state, ckpt_dir: str, step: int):
     """
@@ -21,7 +24,7 @@ def save_model_state(state, ckpt_dir: str, step: int):
     checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     save_args = orbax_utils.save_args_from_target(state)
     
-    checkpointer.save(ckpt_path, state, save_args=save_args)
+    checkpointer.save(ckpt_path, state, save_args=save_args, force=True)
     print(f"Checkpoint saved at step {step} in directory '{ckpt_path}'")
     return ckpt_path 
 
@@ -45,28 +48,55 @@ def restore_model_state(ckpt_dir: str, state):
     print(f"Checkpoint restored from directory '{abs_ckpt_dir}'.")
     return restored_state
 
+
 def get_latent_dataset(autoencoder, params, dataset, batch_size=128):
     latent_list = []
     label_list = []
-    # Create an iterator over the TFDS dataset
-    for batch in dataset:
-        images, labels = batch
-
-        images = images.reshape(images.shape[0], -1)
-
-        rng = jax.random.PRNGKey(0)
-
-        _, _, latent = autoencoder.apply({'params': params}, images, rng)
-
-        latent_list.append(np.array(latent).astype(int) )
-        label_list.append(np.array(labels))
-
-    # Concatenate all batch results into single arrays.
-    latents = np.concatenate(latent_list, axis=0)
-    labels = np.concatenate(label_list, axis=0)
-    return latents, labels
-
-def reconstruct(autoencoder, params, sample):
     rng = jax.random.PRNGKey(0)
+    
+    for batch in dataset:
+        images, labels = batch  
+        
+        # Update the RNG for each batch
+        rng, batch_rng = jax.random.split(rng)
+        images = jax.device_put(np.array(images))  # tf.Tensor → JAX DeviceArray
+        #images = images.reshape((images.shape[0], -1))
+        images = jnp.reshape(images, (images.shape[0], -1))
 
-    return autoencoder.apply({'params': params}, x=None, reconstruct= True, latent=sample, z_rng= rng)
+        _, logits, latent = autoencoder.apply({'params': params}, images, batch_rng)
+
+        # Convert JAX arrays to numpy integers (or any desired type)
+        latent_list.append(np.array(latent).astype(int))
+        label_list.append(np.array(labels))
+    
+    return latent_list, label_list
+
+
+def generate_from_latent(autoencoder, params, latent, image_shape=None, show=False):
+    """
+    Generate outputs from latent vectors using the trained autoencoder model.
+    Args:
+        autoencoder: The VAE model instance.
+        params: The model parameters.
+        latent: A JAX or NumPy array of latent vectors.
+        image_shape: Optional shape to reshape the output (if not provided, 
+                     use the decoder's output shape).
+        show: Whether to plot the generated outputs.
+    Returns:
+        Generated outputs as an array.
+    """
+    # Use the model's generate method; note that it already applies a sigmoid.
+    generated = autoencoder.apply({'params': params}, method=autoencoder.generate, z=latent)
+    
+    if show:
+
+        plt.figure()
+        # If the image has a single channel, squeeze it for display.
+        plt.imshow(generated, cmap="gray")
+
+        plt.title(f"Generated Output\n{latent}")
+        plt.axis("off")
+        plt.show()
+    
+    return generated
+
