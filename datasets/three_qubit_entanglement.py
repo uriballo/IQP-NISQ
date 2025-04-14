@@ -57,11 +57,11 @@ def generate_bs1_state():
     # Biseparable 1: qubit A separable, qubits B and C entangled.
     state_A = np.random.randn(2) + 1j * np.random.randn(2)
     state_A /= np.linalg.norm(state_A)
-    while np.count_nonzero(schmidt_decomp(state_A)) == 1: 
-        state_A = np.random.randn(2) + 1j * np.random.randn(2)
-        state_A /= np.linalg.norm(state_A)
     state_BC = np.random.randn(4) + 1j * np.random.randn(4)
     state_BC /= np.linalg.norm(state_BC)
+    while np.count_nonzero(schmidt_decomp(state_BC)) == 1: 
+        state_BC = np.random.randn(4) + 1j * np.random.randn(4)
+        state_BC /= np.linalg.norm(state_BC)
     state = np.kron(state_A, state_BC)
     return state
 
