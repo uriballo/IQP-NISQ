@@ -89,6 +89,12 @@ def generate_w_state():
     state[4] = 1.0
     state /= np.sqrt(3)
     return state
+def schmidt_decomp(psi):
+    #Schmidt coefficients for a Bipartite state
+    psi_matrix = psi.reshape(2,2)
+    U, S, Vh = np.linalg.svd(psi_matrix)
+    return S
+                
 
 
 class ThreeQubitEntanglementDataset(BaseDataset):
