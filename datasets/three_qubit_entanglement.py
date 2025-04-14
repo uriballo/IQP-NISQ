@@ -47,11 +47,19 @@ def generate_separable_state():
     state_C /= np.linalg.norm(state_C)
     state = np.kron(np.kron(state_A, state_B), state_C)
     return state
+def schmidt_decomp(psi):
+    #Schmidt coefficients for a bipartite state
+    psi_matrix = psi.reshape(2,2)
+    U, S, Vh = np.linalg.svd(psi_matrix)
+    return S
 
 def generate_bs1_state():
     # Biseparable 1: qubit A separable, qubits B and C entangled.
     state_A = np.random.randn(2) + 1j * np.random.randn(2)
     state_A /= np.linalg.norm(state_A)
+    while np.count_nonzero(schmidt_decomp(state_A)) == 1: 
+        state_A = np.random.randn(2) + 1j * np.random.randn(2)
+        state_A /= np.linalg.norm(state_A)
     state_BC = np.random.randn(4) + 1j * np.random.randn(4)
     state_BC /= np.linalg.norm(state_BC)
     state = np.kron(state_A, state_BC)
@@ -89,11 +97,7 @@ def generate_w_state():
     state[4] = 1.0
     state /= np.sqrt(3)
     return state
-def schmidt_decomp(psi):
-    #Schmidt coefficients for a Bipartite state
-    psi_matrix = psi.reshape(2,2)
-    U, S, Vh = np.linalg.svd(psi_matrix)
-    return S
+
                 
 
 
