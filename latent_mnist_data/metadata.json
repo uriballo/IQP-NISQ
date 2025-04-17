@@ -1,0 +1,1 @@
+{"latent_dim": 20, "description": "MNIST dataset encoded to binary latent space using LBAE", "num_train": 60000, "num_test": 10000}
