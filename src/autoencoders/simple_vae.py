@@ -3,15 +3,7 @@ from jax import random, lax
 import jax.numpy as jnp
 import jax
 import numpy as np
-
-# --- Binary Quantizer Function ---
-def binary_quantizer(rng, logits):
-    """Binary quantization using Bernoulli sampling."""
-    probs = nn.sigmoid(logits)  # Convert logits to probabilities
-    binary_sample = random.bernoulli(rng, probs).astype(jnp.float32)  # Sample 0 or 1
-    # Straight-through estimator for gradients
-    binary_latent = binary_sample + probs - lax.stop_gradient(probs)
-    return binary_latent
+from src.autoencoders.quantizer import binary_quantizer
 
 # --- Model Definitions ---
 class Encoder(nn.Module):
@@ -49,8 +41,8 @@ class Decoder(nn.Module):
 
 class VAE(nn.Module):
     """Full Binary VAE model."""
-    latents: int = 16
-    output_shape: tuple = (14, 14, 1)
+    latents: int = 21
+    output_shape: tuple = (91,)
 
     def setup(self):
         self.encoder = Encoder(latents=self.latents)
@@ -65,7 +57,15 @@ class VAE(nn.Module):
     def generate(self, z):
         z = self.decoder(z)
         z = jnp.reshape(z, self.output_shape)
-        return z 
+        return z
+        
+    def encode_logits(self, x):
+        """Get logits from encoder"""
+        return self.encoder(x)
+        
+    def decode_from_z(self, z):
+        """Decode from latent representation"""
+        return self.decoder(z)
 
 def model(latents):
     return VAE(latents=latents)
