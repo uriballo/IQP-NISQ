@@ -10,7 +10,7 @@ import pandas as pd
 from datasets.random_graphs import ErdosRenyiDataset
 
 
-probs = np.linspace(0.05, 0.97,30)
+probs = np.linspace(0.05, 0.97,40)
 results = []
 final_params = []
 #Circuito IQP
