@@ -44,7 +44,7 @@ for p in probs:
     trainer = iqp.Trainer("Adam", loss, stepsize=0.003)
     trainer.train(n_iters= 600,loss_kwargs=loss_kwarg)
     trained_params = trainer.final_params
-    check = circ.sample(trained_params, shots = 1000)
+    check = circ.sample(trained_params, shots = 5000)
     sample_prob = []
     for v in check:
         sample_prob.append(sum(v)/15)
