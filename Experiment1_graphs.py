@@ -6,6 +6,7 @@ import iqpopt.gen_qml as genq
 from iqpopt.gen_qml.utils import median_heuristic
 import jax
 import jax.numpy as jnp
+import json
 import pandas as pd
 from datasets.random_graphs import ErdosRenyiDataset
 
@@ -57,10 +58,14 @@ for p in probs:
 
 # Al final, lo conviertes en DataFrame
 df = pd.DataFrame(results)
+for item in final_params:
+    item["Final Params"] = json.dumps(item["Final Params"].tolist())
+
+param = pd.DataFrame(final_params)
 param = pd.DataFrame(final_params)
 
 # Guardas en CSV
-df.to_csv("Experiment1.csv", index=False)
-param.to_csv("Experiment1_params.csv",index=False)
+df.to_csv("Experiment1A.csv", index=False)
+param.to_csv("Experiment1_paramsA.csv",index=False)
 
 
