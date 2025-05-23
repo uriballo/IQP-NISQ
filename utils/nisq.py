@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import re
 from typing import Dict, List, Tuple, Set
 
-def create_grid_connectivity_manual():
+def aachen_connectivity():
     """
     Creates a manually verified connectivity graph for the QPU.
     """
@@ -620,7 +620,6 @@ def generate_gates_for_subgraph(selected_qubits: List[int], full_connectivity: D
     
     return gates
 
-
 def visualize_gate_structure(gates, n_qubits, title="Gate Structure"):
     """
     Visualizes the gate structure as a connectivity graph.
@@ -677,7 +676,7 @@ def main():
     qubit_data = load_calibration_from_csv("utils/aachen_calib.csv")
     
     # Create connectivity graph
-    connectivity = create_grid_connectivity_manual()
+    connectivity = aachen_connectivity()
     
     # Select best qubits optimized for RZZ gates
     n_qubits = 45  
