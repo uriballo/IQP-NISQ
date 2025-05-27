@@ -3,11 +3,14 @@ import jax
 import iqpopt.gen_qml as genq
 from jax import numpy as jnp
 import iqpopt as iqp
+from iqpopt.utils import initialize_from_data
+import numpy as np
+from utils.nisq import efficient_connectivity_gates
 
 def objective(trial: optuna.Trial, 
-              iqp_circ, 
+              grid_connectivity, 
+              num_qubits,
               base_sigma, 
-              base_params_init,
               train_ds,
               n_iters_hpo = 500,
               n_ops = 1000,
@@ -15,17 +18,15 @@ def objective(trial: optuna.Trial,
               
     learning_rate = trial.suggest_float("learning_rate", 3e-5, 0.1, log=True)
     sigma_multiplier = trial.suggest_float("sigma_multiplier", 0.1, 2.0)
-
-    initialization_choices = [1e-4, 1e-3, 1e-2, 1e-1, 1, 2] 
-
-    initialization_multiplier = trial.suggest_categorical(
-        "initialization_multiplier", initialization_choices
-    )
+    num_layers = trial.suggest_int("num_layers", 1, 5)
+    initialization_multiplier = trial.suggest_float("initialization_multiplier", 1e-4, np.pi)
 
     trial_key = jax.random.PRNGKey(42 + trial.number)
-
+    
+    gates = efficient_connectivity_gates(grid_connectivity, num_qubits, num_layers) 
+    iqp_circ = iqp.IqpSimulator(num_qubits, gates, device='lightning.qubit')
     sigma = base_sigma * sigma_multiplier
-    params_init = base_params_init * initialization_multiplier
+    params_init = initialize_from_data(gates, train_ds) * initialization_multiplier
 
     loss_kwarg = {
         "params": params_init,
@@ -43,6 +44,7 @@ def objective(trial: optuna.Trial,
     print(f"  Learning Rate: {learning_rate}")
     print(f"  Sigma Multiplier: {sigma_multiplier}")
     print(f"  Initialization Multiplier: {initialization_multiplier}")
+    print(f"  Number of Layers: {num_layers}")
 
     try:
         trainer.train(n_iters=n_iters_hpo, loss_kwargs=loss_kwarg, turbo=1)
@@ -60,9 +62,9 @@ def objective(trial: optuna.Trial,
         return float('inf') 
 
 def run_hpo(
-    iqp_circ,
+    grid_connectivity,
+    num_qubits,
     base_sigma,
-    base_params_init,
     train_ds,
     n_trials: int = 100,
     n_iters_hpo: int = 500,
@@ -78,9 +80,9 @@ def run_hpo(
         # simply forward to existing objective signature
         return objective(
             trial,
-            iqp_circ,
+            grid_connectivity,
+            num_qubits,
             base_sigma,
-            base_params_init,
             train_ds,
             n_iters_hpo=n_iters_hpo,
             n_ops=n_ops,
