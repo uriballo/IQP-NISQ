@@ -1,364 +1,484 @@
-import math
-from typing import List, Optional, Tuple
-import matplotlib.pyplot as plt
+import pickle
+import os
+from datetime import datetime
 import networkx as nx
+from networkx.algorithms.bipartite.generators import random_graph
+from datasets.utils import graph_to_vec, vec_to_graph
 import numpy as np
-from datasets.utils import graph_to_vec, vec_to_adj
+from typing import Union, Tuple, List, Optional, Dict, Any
 
 class BipartiteGraphDataset:
-    """
-    Generates a dataset of graphs with a specified number of vertices,
-    represented as flattened upper-triangle vectors. Each graph is labeled
-    as either bipartite (0) or non-bipartite (1).
-
-    The dataset generation attempts to match the desired ratio of bipartite
-    to non-bipartite graphs and can optionally ensure all generated graphs
-    are connected.
-
-    Attributes:
-        num_samples (int): The target number of samples in the dataset.
-                           The actual number might be slightly lower if
-                           generation attempts fail frequently.
-        num_vertices (int): The number of vertices in each graph.
-        ratio_bipartite (float): The desired proportion of bipartite graphs
-                                 in the dataset (between 0.0 and 1.0).
-        edge_prob (float): The probability used for edge creation in the
-                           underlying random graph models (bipartite random
-                           graph and G(n,p)).
-        ensure_connected (bool): If True, only connected graphs are included
-                                 in the dataset.
-        vector_size (int): The dimensionality of the flattened graph vector
-                           (num_vertices * (num_vertices - 1) // 2).
-        max_generation_attempts (int): The maximum number of attempts per
-                                       graph type during generation before
-                                       giving up on that specific graph.
-        data (List[Tuple[np.ndarray, int]]): A list holding the generated
-                                             data as (vector, label) tuples.
-                                             Label 0: Bipartite, Label 1: Non-Bipartite.
-        _rng (np.random.Generator): NumPy random number generator instance.
-        _networkx_seed (Optional[int]): Seed used for networkx graph generation functions.
-                                        Incremented after each use if not None.
-    """
-    GRAPH_TYPES = {0: "Bipartite", 1: "Non-Bipartite"}
-
     def __init__(
         self,
-        num_samples: int,
-        num_vertices: int = 14,
-        ratio_bipartite: float = 0.5,
-        edge_prob: float = 0.2,
-        ensure_connected: bool = True,
-        seed: Optional[int] = None,
-        max_generation_attempts: int = 100,
+        nodes: int,
+        edge_prob: Union[float, Tuple[float, float]],
+        extra_permutations: int = 0,
+        store_graphs: bool = True,
+        verbose: bool = True,
+        small_partition_threshold: int = 50,
     ):
         """
-        Initializes the BipartiteGraphDataset.
-
-        Args:
-            num_samples (int): The target number of graph samples to generate.
-            num_vertices (int): The number of vertices for each graph.
-                                Defaults to 14.
-            ratio_bipartite (float): The desired fraction of bipartite graphs
-                                     in the final dataset. Must be between 0.0
-                                     and 1.0. Defaults to 0.5.
-            edge_prob (float): The probability 'p' for edge creation used in
-                               the random graph generation models (both
-                               bipartite and G(n,p)). Defaults to 0.2.
-            ensure_connected (bool): If True, the generation process will
-                                     discard graphs that are not connected.
-                                     Defaults to True.
-            seed (Optional[int]): An optional seed for the random number
-                                  generators (NumPy and NetworkX) to ensure
-                                  reproducibility. Defaults to None.
-            max_generation_attempts (int): The maximum number of times to
-                                           attempt generating a single valid
-                                           graph (bipartite or non-bipartite)
-                                           before potentially moving on.
-                                           Defaults to 100.
+        nodes: total |V| = n1 + n2
+        edge_prob: single p or (p_min,p_max)
+        extra_permutations: how many extra shuffled copies per base graph.
+        store_graphs: if True, keep Graph objects in self.graphs.
+        verbose: if True, prints progress.
+        small_partition_threshold: partitions with capacity <= this get full allocation.
         """
-        if not (0.0 <= ratio_bipartite <= 1.0):
-            raise ValueError("ratio_bipartite must be between 0.0 and 1.0")
-        if not (0.0 <= edge_prob <= 1.0):
-            raise ValueError("edge_prob must be between 0.0 and 1.0")
-        if num_samples <= 0:
-            raise ValueError("num_samples must be positive.")
-        if num_vertices <= 1:
-            raise ValueError("num_vertices must be greater than 1.")
+        if nodes <= 0:
+            raise ValueError("`nodes` must be positive.")
+        self.nodes = nodes
 
-        self.num_samples = num_samples
-        self.num_vertices = num_vertices
-        self.ratio_bipartite = ratio_bipartite
-        self.edge_prob = edge_prob
-        self.ensure_connected = ensure_connected
-        self.vector_size = num_vertices * (num_vertices - 1) // 2
-        self.max_generation_attempts = max_generation_attempts
-
-        self._rng = np.random.default_rng(seed)
-        # Use the main seed for networkx initially, will be incremented
-        self._networkx_seed = seed
-
-        self.data: List[Tuple[np.ndarray, int]] = []
-        self._generate_data()
-
-        # Print summary after generation
-        actual_samples = len(self.data)
-        if actual_samples == 0:
-             print("\nWarning: No graphs were generated. Check parameters "
-                   "(e.g., edge_prob might be too low for connectivity).")
+        if isinstance(edge_prob, float):
+            if not (0 <= edge_prob <= 1):
+                raise ValueError("edge_prob ∈ [0,1]")
+            self.p_min = self.p_max = edge_prob
         else:
-            bipartite_count = sum(1 for _, label in self.data if label == 0)
-            non_bipartite_count = actual_samples - bipartite_count
-            actual_ratio = bipartite_count / actual_samples
-            print(f"\nBipartite Dataset (k={self.num_vertices}, "
-                  f"p={self.edge_prob}, connected={self.ensure_connected}):")
-            print(f"Target samples: {num_samples}, Generated samples: {actual_samples}")
-            print(f"Bipartite: {bipartite_count}, Non-Bipartite: {non_bipartite_count}")
-            print(f"Target Ratio (Bipartite): {self.ratio_bipartite:.3f}, "
-                  f"Actual Ratio: {actual_ratio:.3f}")
+            p0, p1 = edge_prob
+            if not (0 <= p0 <= 1 and 0 <= p1 <= 1):
+                raise ValueError("edge_prob entries ∈ [0,1]")
+            self.p_min, self.p_max = sorted((p0, p1))
 
+        self.extra_permutations = extra_permutations
+        self.store_graphs = store_graphs
+        self.verbose = verbose
+        self.small_partition_threshold = small_partition_threshold
 
-    def __len__(self) -> int:
-        """Returns the actual number of samples generated."""
-        return len(self.data)
+        self.vectors: List[np.ndarray] = []
+        self.edge_probs: List[float] = []
+        if self.store_graphs:
+            self.graphs: List[nx.Graph] = []
 
-    def __getitem__(self, idx: int) -> Tuple[np.ndarray, int]:
-        """
-        Retrieves the graph vector and label at the specified index.
+        # for iso‐detection 
+        self._all_graphs: List[nx.Graph] = []
+        self._certificates: List[Tuple] = []  
 
-        Args:
-            idx (int): The index of the sample to retrieve.
+    def _get_all_partitions(self) -> List[Tuple[int, int]]:
+        return [(n1, self.nodes - n1) for n1 in range(1, self.nodes // 2 + 1)]
 
-        Returns:
-            Tuple[np.ndarray, int]: A tuple containing the flattened graph
-                                    vector and its label (0 for bipartite,
-                                    1 for non-bipartite).
+    def _estimate_partition_capacity(self, n1: int, n2: int) -> int:
+        if n1 == 1:
+            return n2 + 1
+        e = n1 * n2
+        return min(e * e, 5000)
 
-        Raises:
-            IndexError: If the index is out of the valid range.
-        """
-        if not 0 <= idx < len(self.data):
-            raise IndexError(f"Dataset index {idx} out of range for size {len(self.data)}")
-        return self.data[idx]
-
-    def get_all_data(self) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Returns all generated graph vectors and their corresponding labels
-        as NumPy arrays.
-
-        Returns:
-            Tuple[np.ndarray, np.ndarray]: A tuple containing two arrays:
-                                           - The first array contains all graph
-                                             vectors (shape: [num_actual_samples, vector_size]).
-                                           - The second array contains the
-                                             corresponding labels (shape: [num_actual_samples]).
-        """
-        if not self.data:
-            # Return empty arrays with correct second dimension if no data
-            return np.zeros((0, self.vector_size), dtype=np.float32), np.zeros(0, dtype=np.int32)
-        # Ensure consistent types
-        vecs, labels = zip(*self.data)
-        return np.array(vecs, dtype=np.float32), np.array(labels, dtype=np.int32)
-
-    def _graph_to_vector(self, graph: nx.Graph) -> np.ndarray:
-        """Converts a NetworkX graph to its flattened upper-triangle vector."""
-        return graph_to_vec(graph, self.num_vertices)
-
-    def _vec_to_adj(self, vec: np.ndarray) -> np.ndarray:
-        """Reconstructs the adjacency matrix from a flattened vector."""
-        return vec_to_adj(vec, self.num_vertices)
-
-    def _generate_bipartite(self) -> Optional[nx.Graph]:
-        """Attempts to generate a single valid bipartite graph."""
-        for _ in range(self.max_generation_attempts):
-            # Split nodes as evenly as possible for the two partitions
-            n1 = self.num_vertices // 2
-            n2 = self.num_vertices - n1
-            # Create a random bipartite graph
-            g = nx.bipartite.random_graph(
-                n1, n2, p=self.edge_prob, seed=self._networkx_seed
-            )
-            # Increment seed for next potential networkx call
-            if self._networkx_seed is not None:
-                self._networkx_seed += 1
-
-            # Check connectivity if required
-            # Note: nx.is_connected requires > 0 nodes. Handles single node case implicitly.
-            if self.ensure_connected and g.number_of_nodes() > 1:
-                if not nx.is_connected(g):
-                    continue # Try again if not connected
-
-            # Ensure graph has exactly num_vertices (handles isolated nodes if any)
-            # This step might be redundant if random_graph guarantees node count,
-            # but it's safer to include.
-            if g.number_of_nodes() < self.num_vertices:
-                g.add_nodes_from(
-                    range(g.number_of_nodes(), self.num_vertices)
-                )
-
-            # Final check on node count before returning
-            if g.number_of_nodes() == self.num_vertices:
-                # Sanity check: Ensure it's actually bipartite (should always be true)
-                if nx.is_bipartite(g):
-                    return g
-                # else: # This case should ideally not happen with nx.bipartite.random_graph
-                #    print("Warning: Generated graph intended as bipartite is not.")
-        # Return None if max attempts reached without success
-        # print("Warning: Failed to generate a valid bipartite graph after max attempts.")
-        return None
-
-    def _generate_non_bipartite(self) -> Optional[nx.Graph]:
-        """Attempts to generate a single valid non-bipartite graph."""
-        for _ in range(self.max_generation_attempts):
-            # Generate a general random graph using G(n,p) model
-            g = nx.gnp_random_graph(
-                self.num_vertices, p=self.edge_prob,
-                seed=self._networkx_seed
-            )
-            # Increment seed for next potential networkx call
-            if self._networkx_seed is not None:
-                self._networkx_seed += 1
-
-            # Check if it's bipartite (we want non-bipartite)
-            if nx.is_bipartite(g):
-                continue # Try again if it is bipartite
-
-            # Check connectivity if required
-            if self.ensure_connected and g.number_of_nodes() > 0:
-                 if not nx.is_connected(g):
-                    continue # Try again if not connected
-
-            # If all checks pass, return the graph
-            return g
-        # Return None if max attempts reached without success
-        # print("Warning: Failed to generate a valid non-bipartite graph after max attempts.")
-        return None
-
-    def _generate_data(self):
-        """Generates the full dataset according to the specified parameters."""
-        target_bipartite = int(self.num_samples * self.ratio_bipartite)
-        target_non_bipartite = self.num_samples - target_bipartite
-        generated_bipartite, generated_non_bipartite = 0, 0
-
-        # Set a generous overall attempt limit to prevent infinite loops
-        # in difficult parameter regimes (e.g., low p with ensure_connected)
-        total_attempts = 0
-        max_total_attempts = self.num_samples * self.max_generation_attempts * 2 # Heuristic limit
-
-        generated_data_list = [] # Use a temporary list
-
-        while (generated_bipartite < target_bipartite or generated_non_bipartite < target_non_bipartite) \
-              and total_attempts < max_total_attempts:
-
-            total_attempts += 1
-            # Decide whether to try generating bipartite or non-bipartite
-            # Aim to maintain the target ratio during generation
-            current_total = generated_bipartite + generated_non_bipartite
-            if current_total == 0: # Start with bipartite if ratio >= 0.5
-                 try_bipartite = self.ratio_bipartite >= 0.5
-            else:
-                current_ratio = generated_bipartite / current_total
-                # Try to generate the type that is further below its target ratio,
-                # or if one type has already reached its target.
-                if generated_bipartite >= target_bipartite:
-                    try_bipartite = False
-                elif generated_non_bipartite >= target_non_bipartite:
-                    try_bipartite = True
-                else: # Neither target reached, try to balance ratio
-                    try_bipartite = current_ratio < self.ratio_bipartite
-
-
-            if try_bipartite:
-                g = self._generate_bipartite()
-                if g is not None:
-                    generated_data_list.append((self._graph_to_vector(g), 0))
-                    generated_bipartite += 1
-            else: # Try non-bipartite
-                g = self._generate_non_bipartite()
-                if g is not None:
-                    generated_data_list.append((self._graph_to_vector(g), 1))
-                    generated_non_bipartite += 1
-
-            # Early exit if we somehow generate more than needed (shouldn't happen with current logic)
-            if len(generated_data_list) >= self.num_samples:
-                 break
-
-        if total_attempts >= max_total_attempts:
-            print(f"Warning: Reached maximum total generation attempts ({max_total_attempts}). "
-                  f"Dataset size may be smaller than requested.")
-
-        # Shuffle the collected data and assign to self.data
-        self._rng.shuffle(generated_data_list)
-        self.data = generated_data_list
-        self.num_samples = len(self.data)
-
-    def plot_random_samples(
-        self, num_samples_to_plot: int = 6, seed: Optional[int] = None
-    ):
-        """
-        Selects random graphs from the generated dataset and plots them.
-
-        Args:
-            num_samples_to_plot (int): The number of random graphs to display.
-                                       Defaults to 6.
-            seed (Optional[int]): An optional seed for selecting the samples
-                                  to plot, allowing for reproducible plots.
-                                  If None, uses the class's internal RNG.
-        """
-        if not self.data:
-            print("Dataset is empty. Cannot plot samples.")
-            return
-        if num_samples_to_plot <= 0:
-            print("Number of samples to plot must be positive.")
-            return
-
-        actual_num_samples = len(self.data)
-        if num_samples_to_plot > actual_num_samples:
-            print(
-                f"Warning: Requested {num_samples_to_plot} samples, but only "
-                f"{actual_num_samples} are available. Plotting all."
-            )
-            num_samples_to_plot = actual_num_samples
-
-        plot_rng = np.random.default_rng(seed) if seed is not None else self._rng
-        indices = plot_rng.choice(
-            actual_num_samples, num_samples_to_plot, replace=False
+    def _compute_target_distribution(
+        self, partitions: List[Tuple[int, int]], total_samples: int
+    ) -> Dict[Tuple[int, int], int]:
+        caps = np.array(
+            [
+                self._estimate_partition_capacity(n1, n2)
+                for n1, n2 in partitions
+            ],
+            dtype=int,
         )
-
-        # Determine grid size for subplots
-        cols = math.ceil(math.sqrt(num_samples_to_plot))
-        rows = math.ceil(num_samples_to_plot / cols)
-
-        fig, axes = plt.subplots(
-            rows, cols, figsize=(cols * 4, rows * 4), squeeze=False
-        )
-        axes = axes.flatten()  # Flatten to 1D array for easy iteration
-
-        for i, idx in enumerate(indices):
-            vec, label_idx = self.data[idx]
-            label_name = self.GRAPH_TYPES.get(label_idx, "Unknown")
-
-            adj_matrix = self._vec_to_adj(vec)
-            G = nx.from_numpy_array(adj_matrix)
-
-            ax = axes[i]
-            # Use different colors for bipartite/non-bipartite for clarity
-            node_color = "lightgreen" if label_idx == 0 else "salmon"
-            nx.draw(
-                G,
-                ax=ax,
-                with_labels=True,
-                node_color=node_color,
-                edge_color="gray",
-                node_size=max(100, 4000 // self.num_vertices), # Adjust node size
-                font_size=max(6, 12 - self.num_vertices // 3) # Adjust font size
-            )
-            ax.set_title(f"Sample Index {idx}: {label_name}")
-            ax.axis("off") # Turn off axis borders and ticks
-
-        # Hide any unused subplots
-        for j in range(i + 1, len(axes)):
-            fig.delaxes(axes[j])
-
-        plt.tight_layout()
-        plt.show()
         
+        # Step 1: Identify small partitions and allocate full capacity
+        small_mask = caps <= self.small_partition_threshold
+        small_allocation = caps * small_mask
+        small_total = small_allocation.sum()
+        
+        # Step 2: Distribute remaining samples among larger partitions
+        remaining_samples = max(0, total_samples - small_total)
+        large_caps = caps * (~small_mask)
+        large_total_cap = large_caps.sum()
+        
+        if large_total_cap > 0 and remaining_samples > 0:
+            # Proportional allocation for large partitions
+            large_raw = large_caps * remaining_samples / large_total_cap
+            large_allocation = np.round(large_raw).astype(int)
+            large_allocation = np.clip(large_allocation, 0, large_caps)
+            
+            # Handle rounding remainder
+            remainder = remaining_samples - large_allocation.sum()
+            if remainder > 0:
+                # Add to partitions with largest fractional parts
+                fracs = large_raw - np.floor(large_raw)
+                large_indices = np.where(~small_mask)[0]
+                for idx in np.argsort(fracs[large_indices])[::-1][:remainder]:
+                    actual_idx = large_indices[idx]
+                    if large_allocation[actual_idx] < large_caps[actual_idx]:
+                        large_allocation[actual_idx] += 1
+            elif remainder < 0:
+                # Remove from partitions with largest allocations
+                large_indices = np.where(~small_mask)[0]
+                for idx in np.argsort(large_allocation[large_indices])[::-1][:-remainder]:
+                    actual_idx = large_indices[idx]
+                    if large_allocation[actual_idx] > 0:
+                        large_allocation[actual_idx] -= 1
+        else:
+            large_allocation = np.zeros_like(caps)
+        
+        final_allocation = small_allocation + large_allocation
+        final_allocation = np.where((caps > 0) & (final_allocation == 0), 1, final_allocation)
+        
+        return {
+            part: int(alloc) 
+            for part, alloc in zip(partitions, final_allocation)
+            if alloc > 0
+        }
+
+    def _vectorize(self, G: nx.Graph) -> np.ndarray:
+        mat = nx.to_numpy_array(G, nodelist=range(self.nodes), dtype=np.uint8)
+        iu = np.triu_indices(self.nodes, k=1)
+        return mat[iu].astype(np.uint8)
+
+    def _apply_permutation(
+        self,
+        vec: Optional[np.ndarray] = None,
+        G: Optional[nx.Graph] = None,
+        seed: Optional[int] = None,
+    ) -> Union[np.ndarray, nx.Graph]:
+        if seed is not None:
+            np.random.seed(seed)
+
+        permutation = np.random.permutation(self.nodes)
+        mapping = {i: int(permutation[i]) for i in range(self.nodes)}
+
+        if vec is not None:
+            G0 = vec_to_graph(vec, self.nodes)
+            Gp = nx.relabel_nodes(G0, mapping, copy=True)
+            return self._vectorize(Gp)
+        if G is not None:
+            return nx.relabel_nodes(G, mapping, copy=True)
+
+        raise ValueError("Must pass `vec` or `G`")
+
+    def _get_bipartite_certificate(self, G: nx.Graph) -> Tuple:
+        """
+        Compute a certificate for a bipartite graph that's invariant under 
+        isomorphism. This uses the bipartite structure automatically detected 
+        by NetworkX.
+        """
+        if not nx.is_bipartite(G):
+            # If not bipartite, fall back to degree sequence
+            return tuple(sorted(dict(G.degree()).values()))
+        
+        # Get the two bipartite sets
+        try:
+            sets = nx.bipartite.sets(G)
+            set1, set2 = list(sets)
+        except:
+            # Fallback if bipartite detection fails
+            return tuple(sorted(dict(G.degree()).values()))
+        
+        # Compute degree sequences for each bipartite set
+        deg1 = tuple(sorted(G.degree(node) for node in set1))
+        deg2 = tuple(sorted(G.degree(node) for node in set2))
+        
+        # Create canonical form (smaller set first for consistency)
+        if len(set1) < len(set2) or (len(set1) == len(set2) and deg1 <= deg2):
+            return (len(set1), len(set2), deg1, deg2)
+        else:
+            return (len(set2), len(set1), deg2, deg1)
+
+    def _is_bipartite_isomorphic(self, G1: nx.Graph, G2: nx.Graph) -> bool:
+        """
+        Check if two graphs are isomorphic, considering their bipartite structure.
+        """
+        # First check basic properties
+        if G1.number_of_nodes() != G2.number_of_nodes():
+            return False
+        if G1.number_of_edges() != G2.number_of_edges():
+            return False
+        
+        # Check if both are bipartite
+        is_bip1 = nx.is_bipartite(G1)
+        is_bip2 = nx.is_bipartite(G2)
+        
+        if is_bip1 != is_bip2:
+            return False
+        
+        if is_bip1 and is_bip2:
+            # Both are bipartite - use bipartite isomorphism check
+            try:
+                return nx.is_isomorphic(G1, G2)
+            except:
+                # Fallback to general isomorphism
+                return nx.is_isomorphic(G1, G2)
+        else:
+            # Neither is bipartite - use general isomorphism
+            return nx.is_isomorphic(G1, G2)
+
+    def _is_isomorphic_to_any(self, G: nx.Graph) -> bool:
+        """
+        Check if G is isomorphic to any previously added graph.
+        Uses certificate-based filtering for efficiency.
+        """
+        cert = self._get_bipartite_certificate(G)
+        
+        # Check against all graphs with the same certificate
+        for i, existing_cert in enumerate(self._certificates):
+            if cert == existing_cert:
+                if self._is_bipartite_isomorphic(G, self._all_graphs[i]):
+                    return True
+        
+        return False
+
+    def _add_graph_if_unique(self, G: nx.Graph, edge_prob: float) -> bool:
+        """
+        Add graph to dataset if it's not isomorphic to any existing graph.
+        Returns True if added, False if duplicate.
+        """
+        if self._is_isomorphic_to_any(G):
+            return False
+
+        # Graph is unique - add it
+        cert = self._get_bipartite_certificate(G)
+        self._certificates.append(cert)
+        self._all_graphs.append(G.copy())
+        
+        vec = self._vectorize(G)
+        self.vectors.append(vec)
+        self.edge_probs.append(edge_prob)
+        if self.store_graphs:
+            self.graphs.append(G.copy())
+        
+        return True
+
+    def generate_dataset(
+        self,
+        target_total_samples: int,
+        max_attempts_per_iso: int = 1000,
+        seed: Optional[int] = None,
+    ) -> None:
+        """
+        Builds the dataset of bit‐vectors (and optional Graphs) with strict 
+        bipartite-aware isomorphism checking on every generated graph.
+        """
+        if seed is not None:
+            np.random.seed(seed)
+
+        self.vectors.clear()
+        self.edge_probs.clear()
+        if self.store_graphs:
+            self.graphs.clear()
+        self._all_graphs.clear()
+        self._certificates.clear()
+
+        parts = self._get_all_partitions()
+        if not parts:
+            if self.verbose:
+                print("[Dataset] No bipartite splits → empty dataset")
+            return
+
+        if self.verbose:
+            print(
+                f"[Dataset] target ~{target_total_samples} samples "
+                f"over {len(parts)} partitions"
+            )
+        targets = self._compute_target_distribution(parts, target_total_samples)
+        if self.verbose:
+            for p, t in targets.items():
+                cap = self._estimate_partition_capacity(*p)
+                is_small = cap <= self.small_partition_threshold
+                status = " (FULL)" if is_small and t == cap else ""
+                print(f"  Partition {p}: target {t}, capacity {cap}{status}")
+
+        total_added = 0
+        for (n1, n2), target_count in targets.items():
+            if self.verbose:
+                print(f"[Partition {n1},{n2}] need {target_count} samples")
+            
+            added_this_partition = 0
+            attempt = 0
+            
+            while added_this_partition < target_count and attempt < target_count * max_attempts_per_iso:
+                p = (
+                    np.random.uniform(self.p_min, self.p_max)
+                    if self.p_min != self.p_max
+                    else self.p_min
+                )
+                G0 = random_graph(n1, n2, p, seed=None)
+                
+                # Try to add base graph
+                if self._add_graph_if_unique(G0, p):
+                    added_this_partition += 1
+                    total_added += 1
+                    
+                    # Generate permutations of this base graph
+                    perm_added = 0
+                    perm_attempts = 0
+                    max_perm_attempts = self.extra_permutations * 50
+                    
+                    while perm_added < self.extra_permutations and perm_attempts < max_perm_attempts:
+                        if added_this_partition >= target_count:
+                            break
+                            
+                        seed_k = (
+                            seed + attempt * self.nodes + perm_attempts + 1
+                            if seed is not None
+                            else None
+                        )
+                        Gp = self._apply_permutation(G=G0, seed=seed_k)
+                        
+                        if self._add_graph_if_unique(Gp, p):
+                            perm_added += 1
+                            added_this_partition += 1
+                            total_added += 1
+                        
+                        perm_attempts += 1
+                
+                attempt += 1
+
+            if self.verbose:
+                print(f"  → added {added_this_partition}/{target_count} in {attempt} base attempts")
+
+        if self.verbose:
+            print(
+                f"[Dataset] done: {len(self.vectors)} samples, "
+                f"{len(self._all_graphs)} total graphs"
+            )
+
+    def save_dataset(self, filepath: str, include_metadata: bool = True) -> None:
+        """
+        Save the dataset to a pickle file.
+        
+        Args:
+            filepath: Path where to save the .pkl file
+            include_metadata: If True, includes generation metadata
+        """
+        # Ensure .pkl extension
+        if not filepath.endswith('.pkl'):
+            filepath += '.pkl'
+        
+        # Prepare data to save
+        save_data = {
+            'vectors': self.vectors,
+            'edge_probs': self.edge_probs,
+            'graphs': self.graphs if self.store_graphs else [],
+            '_all_graphs': self._all_graphs,
+            '_certificates': self._certificates,
+            
+            # Dataset parameters
+            'nodes': self.nodes,
+            'p_min': self.p_min,
+            'p_max': self.p_max,
+            'extra_permutations': self.extra_permutations,
+            'store_graphs': self.store_graphs,
+            'small_partition_threshold': self.small_partition_threshold,
+        }
+        
+        if include_metadata:
+            save_data['metadata'] = {
+                'created_at': datetime.now().isoformat(),
+                'total_samples': len(self.vectors),
+                'unique_graphs': len(self._all_graphs),
+                'version': '1.0' 
+            }
+        
+        try:
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
+            
+            with open(filepath, 'wb') as f:
+                pickle.dump(save_data, f, protocol=pickle.HIGHEST_PROTOCOL)
+            
+            if self.verbose:
+                size_mb = os.path.getsize(filepath) / (1024 * 1024)
+                print(f"[Dataset] Saved {len(self.vectors)} samples to {filepath} "
+                    f"({size_mb:.2f} MB)")
+                
+        except Exception as e:
+            raise IOError(f"Failed to save dataset to {filepath}: {e}")
+
+    def load_dataset(self, filepath: str, verbose: Optional[bool] = None) -> None:
+        """
+        Load a dataset from a pickle file.
+        
+        Args:
+            filepath: Path to the .pkl file to load
+            verbose: Override verbose setting (uses current setting if None)
+        """
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Dataset file not found: {filepath}")
+        
+        try:
+            with open(filepath, 'rb') as f:
+                save_data = pickle.load(f)
+            
+            # Load main data
+            self.vectors = save_data['vectors']
+            self.edge_probs = save_data['edge_probs']
+            self.graphs = save_data['graphs']
+            self._all_graphs = save_data['_all_graphs']
+            self._certificates = save_data['_certificates']
+            
+            # Load parameters
+            self.nodes = save_data['nodes']
+            self.p_min = save_data['p_min']
+            self.p_max = save_data['p_max']
+            self.extra_permutations = save_data['extra_permutations']
+            self.store_graphs = save_data['store_graphs']
+            self.small_partition_threshold = save_data.get('small_partition_threshold', 50)
+            
+            # Override verbose if specified
+            if verbose is not None:
+                self.verbose = verbose
+            
+            # Print info
+            if self.verbose:
+                print(f"[Dataset] Loaded {len(self.vectors)} samples from {filepath}")
+                
+                if 'metadata' in save_data:
+                    meta = save_data['metadata']
+                    print(f"  Created: {meta.get('created_at', 'unknown')}")
+                    print(f"  Unique graphs: {meta.get('unique_graphs', len(self._all_graphs))}")
+                    print(f"  Version: {meta.get('version', 'unknown')}")
+            
+        except Exception as e:
+            raise IOError(f"Failed to load dataset from {filepath}: {e}")
+
+    @classmethod
+    def from_file(
+        cls, 
+        filepath: str, 
+        verbose: bool = True
+    ) -> 'BipartiteGraphDataset':
+        """
+        Create a new BipartiteGraphDataset instance by loading from a file.
+        
+        Args:
+            filepath: Path to the .pkl file to load
+            verbose: Verbose setting for the new instance
+        
+        Returns:
+            New BipartiteGraphDataset instance with loaded data
+        """
+        # Create empty instance
+        instance = cls(
+            nodes=1,  # Will be overwritten
+            edge_prob=0.5,  # Will be overwritten
+            verbose=verbose
+        )
+        
+        # Load the actual data
+        instance.load_dataset(filepath, verbose=verbose)
+        
+        return instance
+
+    def get_save_info(self) -> Dict[str, Any]:
+        """
+        Get information about what would be saved (useful for debuging).
+        
+        Returns:
+            Dictionary with information about dataset contents
+        """
+        info = {
+            'total_samples': len(self.vectors),
+            'unique_graphs': len(self._all_graphs),
+            'store_graphs': self.store_graphs,
+            'stored_graphs_count': len(self.graphs),
+            'parameters': {
+                'nodes': self.nodes,
+                'edge_prob_range': (self.p_min, self.p_max),
+                'extra_permutations': self.extra_permutations,
+                'small_partition_threshold': self.small_partition_threshold,
+            }
+        }
+        
+        if self.vectors:
+            info['vector_shape'] = self.vectors[0].shape
+            info['vector_dtype'] = str(self.vectors[0].dtype)
+        
+        return info

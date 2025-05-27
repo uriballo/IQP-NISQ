@@ -121,50 +121,59 @@ def plot_graph(
         plt.show()
 
 
-
 def graph_to_vec(graph: nx.Graph, num_vertices: int) -> np.ndarray:
     """
-    Flatten the strict upper‐triangle of graph’s adjacency matrix
-    (of size num_vertices×num_vertices) into a 1D vector of length
-    num_vertices*(num_vertices-1)//2.
+    Turn G (with nodes 0..num_vertices-1) into a flat upper‐triangle bit‐vector.
     """
-    # ensure the graph has exactly num_vertices nodes
-    if graph.number_of_nodes() != num_vertices:
-        graph = graph.copy()
-        graph.add_nodes_from(range(graph.number_of_nodes(), num_vertices))
-
-    adj = nx.to_numpy_array(graph, nodelist=range(num_vertices))
+    # 1) enforce node‐set
+    if set(graph.nodes()) != set(range(num_vertices)):
+        raise ValueError(
+            f"Graph nodes must be exactly 0..{num_vertices-1}"
+        )
+    # 2) get adjacency (no weights), uint8
+    adj = nx.to_numpy_array(
+        graph,
+        nodelist=range(num_vertices),
+        dtype=np.uint8,
+        weight=None
+    )
+    # 3) flatten strict upper‐triangle
     iu = np.triu_indices(num_vertices, k=1)
-    return adj[iu].astype(np.float32)
+    return adj[iu]
 
 def vec_to_adj(vec: np.ndarray, num_vertices: int) -> np.ndarray:
     """
-    Reconstruct the full adjacency matrix (num_vertices×num_vertices)
-    from its strict upper‐triangle flattening.
+    Reconstruct the symmetric adjacency matrix from a strict-upper vec.
     """
-    exp_len = num_vertices * (num_vertices - 1) // 2
-    if vec.size != exp_len:
-        raise ValueError(
-            f"Length mismatch: got {vec.size}, expected {exp_len}"
-        )
-
-    adj = np.zeros((num_vertices, num_vertices), dtype=np.float32)
+    L = num_vertices * (num_vertices - 1) // 2
+    if vec.size != L:
+        raise ValueError(f"vec has length {vec.size}, expected {L}")
+    adj = np.zeros((num_vertices, num_vertices), dtype=np.uint8)
     iu = np.triu_indices(num_vertices, k=1)
     adj[iu] = vec
-    adj[(iu[1], iu[0])] = vec  # mirror back to lower‐triangle
+    adj[(iu[1], iu[0])] = vec
     return adj
 
-def vec_to_graph(vector: np.ndarray, num_vertices: int) -> nx.Graph:
-    exp_len = num_vertices * (num_vertices - 1) // 2
-    if vector.size != exp_len:
-        raise ValueError(
-            f"Vector length {vector.size} != expected {exp_len}"
-        )
-    mat = np.zeros((num_vertices, num_vertices), int)
+def vec_to_graph(vec: np.ndarray, num_vertices: int) -> nx.Graph:
+    """
+    Build an unweighted, undirected Graph with nodes 0..num_vertices-1
+    from its strict-upper-triangle bit‐vector.
+    """
+    L = num_vertices * (num_vertices - 1) // 2
+    if vec.size != L:
+        raise ValueError(f"vec has length {vec.size}, expected {L}")
+    G = nx.Graph()
+    G.add_nodes_from(range(num_vertices))
     iu = np.triu_indices(num_vertices, k=1)
-    mat[iu] = vector
-    mat = mat + mat.T
-    return nx.from_numpy_array(mat)
+
+    edges = [
+        (int(i), int(j))
+        for (i, j), bit in zip(zip(iu[0], iu[1]), vec)
+        if bit
+    ]
+
+    G.add_edges_from(edges)
+    return G
 
 
 def is_bipartite(vector: np.ndarray, num_vertices: int) -> bool:
@@ -172,13 +181,3 @@ def is_bipartite(vector: np.ndarray, num_vertices: int) -> bool:
         return nx.is_bipartite(vec_to_graph(vector, num_vertices))
     except Exception:
         return False
-
-
-def compute_sigma_flat(flat_data: np.ndarray) -> float:
-    """
-    Compute median-heuristic sigma from flattened data.
-    Returns 1.0 if data is empty.
-    """
-    if flat_data is None or flat_data.size == 0:
-        return 1.0
-    return float(median_heuristic(flat_data.astype(float)))
