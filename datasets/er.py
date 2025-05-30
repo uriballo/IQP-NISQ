@@ -452,23 +452,3 @@ class ErdosRenyiGraphDataset:
             info['vector_dtype'] = str(self.vectors[0].dtype)
         
         return info
-
-if __name__ == "__main__":
-    # Create dataset
-    dataset = ErdosRenyiGraphDataset(
-        nodes=8,
-        edge_prob=(0.1, 0.9),
-        extra_permutations=2,
-        verbose=True,
-        prob_bins=5
-    )
-    
-    # Generate graphs
-    dataset.generate_dataset(target_total_samples=100, seed=42)
-    
-    # Save dataset
-    dataset.save_dataset("erdos_renyi_graphs.pkl")
-    
-    # Load dataset
-    loaded_dataset = ErdosRenyiGraphDataset.from_file("erdos_renyi_graphs.pkl")
-    print(f"Loaded {len(loaded_dataset.vectors)} unique graphs")
