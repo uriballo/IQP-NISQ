@@ -14,7 +14,8 @@ class ErdosRenyiGraphDataset:
         extra_permutations: int = 0,
         store_graphs: bool = True,
         verbose: bool = True,
-        prob_bins: int = 10,
+        store_generation_params: bool = False,
+        filter_by_actual_density: bool = True,
     ):
         """
         Dataset generator for Erdős-Rényi graphs with isomorphism checking.
@@ -25,7 +26,8 @@ class ErdosRenyiGraphDataset:
             extra_permutations: How many extra shuffled copies per base graph
             store_graphs: If True, keep Graph objects in self.graphs
             verbose: If True, prints progress
-            prob_bins: Number of bins to partition edge probability range
+            store_generation_params: If True, also store the generation parameters
+            filter_by_actual_density: If True, filter graphs by actual edge density
         """
         if nodes <= 0:
             raise ValueError("`nodes` must be positive.")
@@ -44,10 +46,13 @@ class ErdosRenyiGraphDataset:
         self.extra_permutations = extra_permutations
         self.store_graphs = store_graphs
         self.verbose = verbose
-        self.prob_bins = prob_bins
+        self.store_generation_params = store_generation_params
+        self.filter_by_actual_density = filter_by_actual_density
 
         self.vectors: List[np.ndarray] = []
-        self.edge_probs: List[float] = []
+        self.edge_probs: List[float] = []  # Actual edge probabilities
+        if self.store_generation_params:
+            self.generation_params: List[float] = []  # Parameters used for generation
         if self.store_graphs:
             self.graphs: List[nx.Graph] = []
 
@@ -55,80 +60,12 @@ class ErdosRenyiGraphDataset:
         self._all_graphs: List[nx.Graph] = []
         self._certificates: List[Tuple] = []
 
-    def _get_prob_bins(self) -> List[Tuple[float, float]]:
-        """Get probability range bins for partitioning."""
-        if self.p_min == self.p_max:
-            return [(self.p_min, self.p_max)]
-        
-        bins = []
-        step = (self.p_max - self.p_min) / self.prob_bins
-        for i in range(self.prob_bins):
-            bin_start = self.p_min + i * step
-            bin_end = self.p_min + (i + 1) * step
-            bins.append((bin_start, bin_end))
-        return bins
-
-    def _estimate_bin_capacity(self, p_min: float, p_max: float) -> int:
-        """
-        Estimate how many unique graphs we can generate in a probability bin.
-        This is a heuristic based on expected graph properties.
-        """
-        n = self.nodes
+    def _compute_actual_edge_prob(self, G: nx.Graph) -> float:
+        """Compute the actual edge probability/density of a graph."""
+        n = G.number_of_nodes()
+        m = G.number_of_edges()
         max_edges = n * (n - 1) // 2
-        
-        # For very small or very large probabilities, fewer unique graphs
-        p_mid = (p_min + p_max) / 2
-        if p_mid < 0.1 or p_mid > 0.9:
-            base_capacity = min(1000, max_edges)
-        else:
-            # Peak diversity around p=0.5
-            base_capacity = min(5000, max_edges * 2)
-        
-        # Scale based on number of nodes
-        if n <= 10:
-            return min(base_capacity, 100)
-        elif n <= 20:
-            return min(base_capacity, 1000)
-        else:
-            return base_capacity
-
-    def _compute_target_distribution(
-        self, prob_bins: List[Tuple[float, float]], total_samples: int
-    ) -> Dict[Tuple[float, float], int]:
-        """Compute target number of samples per probability bin."""
-        capacities = np.array([
-            self._estimate_bin_capacity(p_min, p_max) 
-            for p_min, p_max in prob_bins
-        ])
-        
-        # Distribute samples proportionally to capacity
-        total_capacity = capacities.sum()
-        if total_capacity == 0:
-            return {}
-        
-        raw_allocation = capacities * total_samples / total_capacity
-        allocation = np.round(raw_allocation).astype(int)
-        allocation = np.clip(allocation, 1, capacities)  # At least 1 per bin
-        
-        # Handle rounding remainder
-        remainder = total_samples - allocation.sum()
-        if remainder > 0:
-            # Add to bins with largest fractional parts
-            fractions = raw_allocation - np.floor(raw_allocation)
-            for idx in np.argsort(fractions)[::-1][:remainder]:
-                if allocation[idx] < capacities[idx]:
-                    allocation[idx] += 1
-        elif remainder < 0:
-            # Remove from bins with largest allocations
-            for idx in np.argsort(allocation)[::-1][:-remainder]:
-                if allocation[idx] > 1:
-                    allocation[idx] -= 1
-        
-        return {
-            bin_range: int(alloc)
-            for bin_range, alloc in zip(prob_bins, allocation)
-            if alloc > 0
-        }
+        return m / max_edges if max_edges > 0 else 0.0
 
     def _vectorize(self, G: nx.Graph) -> np.ndarray:
         """Convert graph to upper triangular adjacency vector."""
@@ -221,7 +158,7 @@ class ErdosRenyiGraphDataset:
         
         return False
 
-    def _add_graph_if_unique(self, G: nx.Graph, edge_prob: float) -> bool:
+    def _add_graph_if_unique(self, G: nx.Graph, generation_param: float) -> bool:
         """
         Add graph to dataset if it's not isomorphic to any existing graph.
         Returns True if added, False if duplicate.
@@ -235,8 +172,12 @@ class ErdosRenyiGraphDataset:
         self._all_graphs.append(G.copy())
         
         vec = self._vectorize(G)
+        actual_edge_prob = self._compute_actual_edge_prob(G)
+        
         self.vectors.append(vec)
-        self.edge_probs.append(edge_prob)
+        self.edge_probs.append(actual_edge_prob)  # Store ACTUAL edge probability
+        if self.store_generation_params:
+            self.generation_params.append(generation_param)  # Store generation parameter
         if self.store_graphs:
             self.graphs.append(G.copy())
         
@@ -251,91 +192,147 @@ class ErdosRenyiGraphDataset:
         """
         Build the dataset of bit-vectors (and optional Graphs) with strict 
         isomorphism checking on every generated graph.
+        
+        Args:
+            target_total_samples: Number of unique graphs to generate
+            max_attempts_per_iso: Maximum attempts per isomorphism check (unused but kept for compatibility)
+            seed: Random seed
         """
         if seed is not None:
             np.random.seed(seed)
 
         self.vectors.clear()
         self.edge_probs.clear()
+        if self.store_generation_params:
+            self.generation_params.clear()
         if self.store_graphs:
             self.graphs.clear()
         self._all_graphs.clear()
         self._certificates.clear()
 
-        prob_bins = self._get_prob_bins()
-        if not prob_bins:
-            if self.verbose:
-                print("[Dataset] No probability bins → empty dataset")
-            return
-
         if self.verbose:
-            print(
-                f"[Dataset] target ~{target_total_samples} samples "
-                f"over {len(prob_bins)} probability bins"
-            )
+            if self.p_min == self.p_max:
+                print(f"[Dataset] Generating {target_total_samples} samples with p={self.p_min}")
+            else:
+                density_str = "density" if self.filter_by_actual_density else "generation param"
+                print(f"[Dataset] Generating {target_total_samples} samples with {density_str}∈[{self.p_min:.3f}, {self.p_max:.3f}]")
 
-        targets = self._compute_target_distribution(prob_bins, target_total_samples)
-        if self.verbose:
-            for (p_min, p_max), target in targets.items():
-                capacity = self._estimate_bin_capacity(p_min, p_max)
-                print(f"  Bin [{p_min:.3f}, {p_max:.3f}]: target {target}, capacity {capacity}")
-
-        total_added = 0
-        for (p_min, p_max), target_count in targets.items():
-            if self.verbose:
-                print(f"[Bin [{p_min:.3f}, {p_max:.3f}]] need {target_count} samples")
-            
-            added_this_bin = 0
-            attempt = 0
-            
-            while added_this_bin < target_count and attempt < target_count * max_attempts_per_iso:
-                # Sample edge probability from bin range
-                if p_min == p_max:
-                    p = p_min
+        added_count = 0
+        attempt = 0
+        rejected_density = 0
+        
+        while added_count < target_total_samples:
+            # Sample edge probability uniformly from range
+            if self.p_min == self.p_max:
+                p = self.p_min
+            else:
+                # If filtering by actual density, sample from a wider range
+                # to increase chances of hitting the target density range
+                if self.filter_by_actual_density:
+                    # Use a wider generation range to account for variance
+                    p_range_expansion = 0.3  # Expand by 30% on each side
+                    expanded_min = max(0.0, self.p_min - p_range_expansion)
+                    expanded_max = min(1.0, self.p_max + p_range_expansion)
+                    p = np.random.uniform(expanded_min, expanded_max)
                 else:
-                    p = np.random.uniform(p_min, p_max)
+                    p = np.random.uniform(self.p_min, self.p_max)
+            
+            # Generate Erdős-Rényi graph
+            G0 = nx.erdos_renyi_graph(self.nodes, p, seed=None)
+            
+            # Check if actual edge density is within desired range
+            if self.filter_by_actual_density:
+                actual_density = self._compute_actual_edge_prob(G0)
+                if not (self.p_min <= actual_density <= self.p_max):
+                    rejected_density += 1
+                    attempt += 1
+                    continue
+            
+            # Try to add base graph
+            if self._add_graph_if_unique(G0, p):
+                added_count += 1
                 
-                # Generate Erdős-Rényi graph
-                G0 = nx.erdos_renyi_graph(self.nodes, p, seed=None)
+                # Generate permutations of this base graph
+                perm_added = 0
+                perm_attempts = 0
+                max_perm_attempts = self.extra_permutations * 50
                 
-                # Try to add base graph
-                if self._add_graph_if_unique(G0, p):
-                    added_this_bin += 1
-                    total_added += 1
-                    
-                    # Generate permutations of this base graph
-                    perm_added = 0
-                    perm_attempts = 0
-                    max_perm_attempts = self.extra_permutations * 50
-                    
-                    while perm_added < self.extra_permutations and perm_attempts < max_perm_attempts:
-                        if added_this_bin >= target_count:
-                            break
-                            
-                        seed_k = (
-                            seed + attempt * self.nodes + perm_attempts + 1
-                            if seed is not None
-                            else None
-                        )
-                        Gp = self._apply_permutation(G=G0, seed=seed_k)
+                while perm_added < self.extra_permutations and perm_attempts < max_perm_attempts:
+                    if added_count >= target_total_samples:
+                        break
                         
-                        if self._add_graph_if_unique(Gp, p):
-                            perm_added += 1
-                            added_this_bin += 1
-                            total_added += 1
-                        
-                        perm_attempts += 1
-                
-                attempt += 1
-
-            if self.verbose:
-                print(f"  → added {added_this_bin}/{target_count} in {attempt} base attempts")
+                    seed_k = (
+                        seed + attempt * self.nodes + perm_attempts + 1
+                        if seed is not None
+                        else None
+                    )
+                    Gp = self._apply_permutation(G=G0, seed=seed_k)
+                    
+                    if self._add_graph_if_unique(Gp, p):
+                        perm_added += 1
+                        added_count += 1
+                    
+                    perm_attempts += 1
+            
+            attempt += 1
+            
+            # Optional: Print progress for long-running generation
+            if self.verbose and attempt % 10000 == 0:
+                if self.filter_by_actual_density:
+                    print(f"  Attempt {attempt}: {added_count}/{target_total_samples} unique graphs found, {rejected_density} rejected for density")
+                else:
+                    print(f"  Attempt {attempt}: {added_count}/{target_total_samples} unique graphs found")
 
         if self.verbose:
-            print(
-                f"[Dataset] done: {len(self.vectors)} samples, "
-                f"{len(self._all_graphs)} total graphs"
-            )
+            print(f"[Dataset] Done: {added_count} samples in {attempt} attempts")
+            if self.filter_by_actual_density and rejected_density > 0:
+                print(f"  Rejected {rejected_density} graphs for density outside range")
+            if self.edge_probs:
+                print(f"  Edge probability range: [{min(self.edge_probs):.3f}, {max(self.edge_probs):.3f}]")
+                print(f"  Mean edge probability: {np.mean(self.edge_probs):.3f}")
+
+    def verify_edge_probabilities(self) -> Dict[str, Any]:
+        """
+        Verify that stored edge probabilities match the actual graph edge densities.
+        Returns statistics about the verification.
+        """
+        if not self.vectors:
+            return {"error": "No graphs in dataset"}
+        
+        # Recompute edge probabilities from vectors
+        recomputed_probs = []
+        for vec in self.vectors:
+            G = self._vec_to_graph(vec)
+            actual_prob = self._compute_actual_edge_prob(G)
+            recomputed_probs.append(actual_prob)
+        
+        recomputed_probs = np.array(recomputed_probs)
+        stored_probs = np.array(self.edge_probs)
+        
+        # Check if they match
+        matches = np.allclose(recomputed_probs, stored_probs, rtol=1e-10)
+        max_diff = np.max(np.abs(recomputed_probs - stored_probs))
+        
+        result = {
+            "all_match": matches,
+            "max_difference": float(max_diff),
+            "mean_stored": float(np.mean(stored_probs)),
+            "mean_recomputed": float(np.mean(recomputed_probs)),
+            "std_stored": float(np.std(stored_probs)),
+            "std_recomputed": float(np.std(recomputed_probs)),
+            "range_stored": [float(np.min(stored_probs)), float(np.max(stored_probs))],
+        }
+        
+        if self.store_generation_params:
+            gen_params = np.array(self.generation_params)
+            result.update({
+                "mean_generation_param": float(np.mean(gen_params)),
+                "std_generation_param": float(np.std(gen_params)),
+                "range_generation_param": [float(np.min(gen_params)), float(np.max(gen_params))],
+                "param_vs_actual_diff": float(np.mean(np.abs(gen_params - stored_probs))),
+            })
+        
+        return result
 
     def save_dataset(self, filepath: str, include_metadata: bool = True) -> None:
         """Save the dataset to a pickle file."""
@@ -355,15 +352,19 @@ class ErdosRenyiGraphDataset:
             'p_max': self.p_max,
             'extra_permutations': self.extra_permutations,
             'store_graphs': self.store_graphs,
-            'prob_bins': self.prob_bins,
+            'store_generation_params': self.store_generation_params,
+            'filter_by_actual_density': self.filter_by_actual_density,
         }
+        
+        if self.store_generation_params:
+            save_data['generation_params'] = self.generation_params
         
         if include_metadata:
             save_data['metadata'] = {
                 'created_at': datetime.now().isoformat(),
                 'total_samples': len(self.vectors),
                 'unique_graphs': len(self._all_graphs),
-                'version': '1.0',
+                'version': '1.3',
                 'graph_type': 'erdos_renyi'
             }
         
@@ -403,7 +404,14 @@ class ErdosRenyiGraphDataset:
             self.p_max = save_data['p_max']
             self.extra_permutations = save_data['extra_permutations']
             self.store_graphs = save_data['store_graphs']
-            self.prob_bins = save_data.get('prob_bins', 10)
+            self.store_generation_params = save_data.get('store_generation_params', False)
+            self.filter_by_actual_density = save_data.get('filter_by_actual_density', True)
+            
+            # Load generation params if available
+            if self.store_generation_params and 'generation_params' in save_data:
+                self.generation_params = save_data['generation_params']
+            elif self.store_generation_params:
+                self.generation_params = []
             
             if verbose is not None:
                 self.verbose = verbose
@@ -443,12 +451,21 @@ class ErdosRenyiGraphDataset:
                 'nodes': self.nodes,
                 'edge_prob_range': (self.p_min, self.p_max),
                 'extra_permutations': self.extra_permutations,
-                'prob_bins': self.prob_bins,
+                'store_generation_params': self.store_generation_params,
+                'filter_by_actual_density': self.filter_by_actual_density,
             }
         }
         
         if self.vectors:
             info['vector_shape'] = self.vectors[0].shape
             info['vector_dtype'] = str(self.vectors[0].dtype)
+        
+        if self.edge_probs:
+            info['edge_prob_stats'] = {
+                'min': float(min(self.edge_probs)),
+                'max': float(max(self.edge_probs)),
+                'mean': float(np.mean(self.edge_probs)),
+                'std': float(np.std(self.edge_probs)),
+            }
         
         return info
