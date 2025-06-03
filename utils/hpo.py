@@ -18,7 +18,7 @@ def objective(trial: optuna.Trial,
               
     learning_rate = trial.suggest_float("learning_rate", 3e-5, 0.1, log=True)
     sigma_multiplier = trial.suggest_float("sigma_multiplier", 0.1, 2.0)
-    num_layers = trial.suggest_int("num_layers", 1, 5)
+    num_layers = trial.suggest_int("num_layers", 1, 2)
     initialization_multiplier = trial.suggest_float("initialization_multiplier", 1e-4, np.pi)
 
     trial_key = jax.random.PRNGKey(42 + trial.number)
@@ -68,8 +68,8 @@ def run_hpo(
     train_ds,
     n_trials: int = 100,
     n_iters_hpo: int = 500,
-    n_ops: int = 1000,
-    n_samples: int = 1000,
+    n_ops: int = 2000,
+    n_samples: int = 2000,
     direction: str = "minimize",
 ) -> optuna.study.Study:
     """
