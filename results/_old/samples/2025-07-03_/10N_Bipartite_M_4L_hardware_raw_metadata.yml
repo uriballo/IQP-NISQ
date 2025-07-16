@@ -1,0 +1,12 @@
+experiment_name: 10N_Bipartite_M_4L
+layers: 4
+mode: hardware
+shots: 512
+gate_breakdown:
+    rz: 830
+    sx: 807
+    cz: 376
+    x: 15
+total_gates: 2028
+parametrized_gates: 830
+non_parametrized_gates: 1198

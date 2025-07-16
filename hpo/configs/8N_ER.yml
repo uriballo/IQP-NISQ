@@ -1,0 +1,29 @@
+# =================================================================
+# Configuration for 8-Node ER Graph HPO 
+# =================================================================
+
+nodes: 8
+graph_type: "ER"
+
+dataset_dir: "data/raw_data"
+results_dir: "results" 
+hpo_log_dir: "results/hpo_logs" 
+final_models_dir: "results/trained_params" 
+random_seed: 37
+optimizer: "Adam"
+
+n_ops: 2000
+n_samples: 2000
+
+hpo_trials: 200              
+hpo_iterations: 500
+final_train_iterations: 1000 
+hpo_cv_folds: 2        
+
+fixed_params: # chosen based on parameter importance from initial experiments
+  num_layers: 1
+  initialization_multiplier: 1.0
+
+hpo_search_space:
+  learning_rate: [1.0e-4, 1.0e-3]       
+  sigma_multiplier: [0.01, 0.2]

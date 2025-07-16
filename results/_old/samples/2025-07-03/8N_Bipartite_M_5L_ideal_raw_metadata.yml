@@ -1,0 +1,9 @@
+experiment_name: 8N_Bipartite_M_5L
+layers: 5
+mode: ideal
+shots: 512
+gate_breakdown:
+    cx: 280
+    rz: 272
+    h: 56
+total_gates: 608

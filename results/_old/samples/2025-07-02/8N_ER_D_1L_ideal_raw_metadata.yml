@@ -1,0 +1,11 @@
+experiment_name: 8N_ER_D_1L
+layers: 1
+mode: ideal
+shots: 512
+gate_breakdown:
+    h: 56
+    rz: 28
+    rzz: 28
+total_gates: 112
+parametrized_gates: 56
+non_parametrized_gates: 56

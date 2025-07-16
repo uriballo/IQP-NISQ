@@ -1,0 +1,10 @@
+connectivity: Medium
+final_training_loss: -7.217425907737662e-05
+graph_type: ER
+hyperparameters:
+  initialization_multiplier: 1.0
+  learning_rate: 0.000707007681549798
+  num_layers: 1
+  sigma_multiplier: 0.028917430176649956
+nodes: 8
+run_id: '20250709_142102'

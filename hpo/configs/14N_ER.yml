@@ -1,0 +1,29 @@
+# =================================================================
+# Configuration for 14-Node ER Graph HPO 
+# =================================================================
+
+nodes: 14
+graph_type: "ER"
+
+dataset_dir: "data/raw_data"
+results_dir: "results" 
+hpo_log_dir: "results/hpo_logs" 
+final_models_dir: "results/trained_params" 
+random_seed: 37
+optimizer: "Adam"
+
+n_ops: 2000
+n_samples: 2000
+
+hpo_trials: 150              
+hpo_iterations: 600
+final_train_iterations: 1000 
+hpo_cv_folds: 3        
+
+fixed_params: 
+  num_layers: 2
+
+hpo_search_space:
+  learning_rate: [1.0e-5, 1.0e-3]       
+  sigma_multiplier: [0.01, 1.0]
+  initialization_multiplier: [0.1, 1.0]

@@ -1,0 +1,12 @@
+experiment_name: 14N_ER_S_3L
+layers: 3
+mode: hardware
+shots: 512
+gate_breakdown:
+    rz: 1360
+    sx: 1336
+    cz: 606
+    x: 18
+total_gates: 3320
+parametrized_gates: 1360
+non_parametrized_gates: 1960

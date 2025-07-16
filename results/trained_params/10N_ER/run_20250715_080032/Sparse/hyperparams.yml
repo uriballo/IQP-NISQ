@@ -1,0 +1,10 @@
+connectivity: Sparse
+final_training_loss: 7.218177643824985e-05
+graph_type: ER
+hyperparameters:
+  initialization_multiplier: 0.8307598542131849
+  learning_rate: 5.1845353493407725e-05
+  num_layers: 1
+  sigma_multiplier: 0.054613589361241235
+nodes: 10
+run_id: '20250715_080032'

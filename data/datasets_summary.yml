@@ -1,0 +1,215 @@
+- name: 8N_Bipartite_Dense
+  elements: 261
+  unique_isomorphic: 261
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.31102900930487143
+
+- name: 8N_Bipartite_Medium
+  elements: 271
+  unique_isomorphic: 270
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.2887453874538745
+
+- name: 8N_Bipartite_Sparse
+  elements: 133
+  unique_isomorphic: 133
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.22556390977443605
+
+- name: 8N_ER_Dense
+  elements: 200
+  unique_isomorphic: 200
+  bipartite_percentage: 0.0
+  average_edge_prob: 0.7617857142857142
+
+- name: 8N_ER_Medium
+  elements: 200
+  unique_isomorphic: 200
+  bipartite_percentage: 0.5
+  average_edge_prob: 0.4419642857142857
+
+- name: 8N_ER_Sparse
+  elements: 200
+  unique_isomorphic: 194
+  bipartite_percentage: 51.5
+  average_edge_prob: 0.2207142857142857
+
+- name: 10N_Bipartite_Dense
+  elements: 498
+  unique_isomorphic: 498
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.3469879518072289
+
+- name: 10N_Bipartite_Medium
+  elements: 500
+  unique_isomorphic: 500
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.23066666666666663
+
+- name: 10N_Bipartite_Sparse
+  elements: 473
+  unique_isomorphic: 473
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.1770730561428236
+
+- name: 10N_ER_Dense
+  elements: 500
+  unique_isomorphic: 500
+  bipartite_percentage: 0.0
+  average_edge_prob: 0.7884444444444445
+
+- name: 10N_ER_Medium
+  elements: 500
+  unique_isomorphic: 500
+  bipartite_percentage: 0.2
+  average_edge_prob: 0.43804444444444446
+
+- name: 10N_ER_Sparse
+  elements: 500
+  unique_isomorphic: 497
+  bipartite_percentage: 33.800000000000004
+  average_edge_prob: 0.19186666666666669
+
+- name: 12N_Bipartite_Dense
+  elements: 496
+  unique_isomorphic: 496
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.37014296187683277
+
+- name: 12N_Bipartite_Medium
+  elements: 499
+  unique_isomorphic: 499
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.21263739600412945
+
+- name: 12N_Bipartite_Sparse
+  elements: 495
+  unique_isomorphic: 495
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.12479338842975207
+
+- name: 12N_ER_Dense
+  elements: 500
+  unique_isomorphic: 500
+  bipartite_percentage: 0.0
+  average_edge_prob: 0.813090909090909
+
+- name: 12N_ER_Medium
+  elements: 500
+  unique_isomorphic: 500
+  bipartite_percentage: 0.0
+  average_edge_prob: 0.43963636363636366
+
+- name: 12N_ER_Sparse
+  elements: 500
+  unique_isomorphic: 499
+  bipartite_percentage: 32.6
+  average_edge_prob: 0.16678787878787876
+
+- name: 14N_Bipartite_Dense
+  elements: 995
+  unique_isomorphic: 995
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.37265448119719474
+
+- name: 14N_Bipartite_Medium
+  elements: 999
+  unique_isomorphic: 999
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.20842820842820842
+
+- name: 14N_Bipartite_Sparse
+  elements: 995
+  unique_isomorphic: 995
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.10419128610083385
+
+- name: 14N_ER_Dense
+  elements: 1000
+  unique_isomorphic: 1000
+  bipartite_percentage: 0.0
+  average_edge_prob: 0.8144615384615386
+
+- name: 14N_ER_Medium
+  elements: 1000
+  unique_isomorphic: 1000
+  bipartite_percentage: 0.0
+  average_edge_prob: 0.4487472527472528
+
+- name: 14N_ER_Sparse
+  elements: 1000
+  unique_isomorphic: 999
+  bipartite_percentage: 27.900000000000002
+  average_edge_prob: 0.15745054945054943
+
+- name: 16N_Bipartite_Dense
+  elements: 995
+  unique_isomorphic: 995
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.375963149078727
+
+- name: 16N_Bipartite_Medium
+  elements: 999
+  unique_isomorphic: 999
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.20511344678011345
+
+- name: 16N_Bipartite_Sparse
+  elements: 994
+  unique_isomorphic: 994
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.08617538564721663
+
+- name: 16N_ER_Dense
+  elements: 1000
+  unique_isomorphic: 1000
+  bipartite_percentage: 0.0
+  average_edge_prob: 0.8199500000000001
+
+- name: 16N_ER_Medium
+  elements: 1000
+  unique_isomorphic: 1000
+  bipartite_percentage: 0.0
+  average_edge_prob: 0.4447583333333333
+
+- name: 16N_ER_Sparse
+  elements: 1000
+  unique_isomorphic: 999
+  bipartite_percentage: 22.0
+  average_edge_prob: 0.15318333333333334
+
+- name: 18N_Bipartite_Dense
+  elements: 995
+  unique_isomorphic: 995
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.3696521824810326
+
+- name: 18N_Bipartite_Medium
+  elements: 998
+  unique_isomorphic: 998
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.19671368881553958
+
+- name: 18N_Bipartite_Sparse
+  elements: 992
+  unique_isomorphic: 992
+  bipartite_percentage: 100.0
+  average_edge_prob: 0.07471537001897532
+
+- name: 18N_ER_Dense
+  elements: 1000
+  unique_isomorphic: 1000
+  bipartite_percentage: 0.0
+  average_edge_prob: 0.8254640522875818
+
+- name: 18N_ER_Medium
+  elements: 1000
+  unique_isomorphic: 1000
+  bipartite_percentage: 0.0
+  average_edge_prob: 0.4427908496732026
+  
+- name: 18N_ER_Sparse
+  elements: 1000
+  unique_isomorphic: 1000
+  bipartite_percentage: 17.7
+  average_edge_prob: 0.1496797385620915

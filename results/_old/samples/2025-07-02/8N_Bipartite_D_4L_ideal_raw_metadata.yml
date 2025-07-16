@@ -1,0 +1,11 @@
+experiment_name: 8N_Bipartite_D_4L
+layers: 4
+mode: ideal
+shots: 512
+gate_breakdown:
+    rz: 112
+    rzz: 112
+    h: 56
+total_gates: 280
+parametrized_gates: 224
+non_parametrized_gates: 56

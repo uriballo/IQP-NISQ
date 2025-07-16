@@ -1,0 +1,11 @@
+experiment_name: 10N_ER_S_1L
+layers: 1
+mode: hardware
+shots: 512
+gate_breakdown:
+    rz: 357
+    sx: 268
+    cz: 94
+total_gates: 719
+parametrized_gates: 357
+non_parametrized_gates: 362

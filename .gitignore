@@ -3,8 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 .DS_STORE
-data
-classification
 # C extensions
 *.so
 .DS_STORE

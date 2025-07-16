@@ -1,0 +1,12 @@
+experiment_name: 18N_ER_M_2L
+layers: 2
+mode: hardware
+shots: 512
+gate_breakdown:
+    rz: 1785
+    sx: 1628
+    cz: 688
+    x: 29
+total_gates: 4130
+parametrized_gates: 1785
+non_parametrized_gates: 2345

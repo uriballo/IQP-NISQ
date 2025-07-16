@@ -1,0 +1,10 @@
+connectivity: Dense
+final_training_loss: 0.00012195545631763463
+graph_type: Bipartite
+hyperparameters:
+  initialization_multiplier: 1.0
+  learning_rate: 1.9810694884261448e-05
+  num_layers: 1
+  sigma_multiplier: 0.12661281621546172
+nodes: 8
+run_id: '20250708_220824'

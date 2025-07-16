@@ -1,0 +1,12 @@
+experiment_name: 18N_Bipartite_S_3L
+layers: 3
+mode: hardware
+shots: 512
+gate_breakdown:
+    rz: 2363
+    sx: 2262
+    cz: 1032
+    x: 29
+total_gates: 5686
+parametrized_gates: 2363
+non_parametrized_gates: 3323
