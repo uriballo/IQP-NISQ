@@ -1,0 +1,5 @@
+nodes: 10
+graph_type: Unknown
+hyperparameters:
+  num_layers: 3
+  source_file: params_10N_COMBINED_DS_LR0.0953634651979671_SIGMA0.1012510739297485_INIT0.9562974900774848_NUMLAYERS3.npy

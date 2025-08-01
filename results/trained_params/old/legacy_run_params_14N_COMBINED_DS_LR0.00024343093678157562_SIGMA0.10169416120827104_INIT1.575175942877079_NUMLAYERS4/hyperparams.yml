@@ -1,0 +1,5 @@
+nodes: 14
+graph_type: Unknown
+hyperparameters:
+  num_layers: 4
+  source_file: params_14N_COMBINED_DS_LR0.00024343093678157562_SIGMA0.10169416120827104_INIT1.575175942877079_NUMLAYERS4.npy

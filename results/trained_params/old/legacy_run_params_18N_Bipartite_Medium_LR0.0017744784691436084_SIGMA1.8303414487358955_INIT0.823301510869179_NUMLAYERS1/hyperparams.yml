@@ -1,0 +1,5 @@
+nodes: 18
+graph_type: BP
+hyperparameters:
+  num_layers: 1
+  source_file: params_18N_Bipartite_Medium_LR0.0017744784691436084_SIGMA1.8303414487358955_INIT0.823301510869179_NUMLAYERS1.npy

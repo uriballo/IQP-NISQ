@@ -1,9 +1,0 @@
-experiment_name: 8N_Bipartite_D_3L
-layers: 3
-mode: ideal
-shots: 512
-gate_breakdown:
-    cx: 168
-    rz: 164
-    h: 56
-total_gates: 388

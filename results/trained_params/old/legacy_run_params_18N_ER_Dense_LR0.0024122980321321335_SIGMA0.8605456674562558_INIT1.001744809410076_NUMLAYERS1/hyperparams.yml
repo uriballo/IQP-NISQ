@@ -1,0 +1,5 @@
+nodes: 18
+graph_type: ER
+hyperparameters:
+  num_layers: 1
+  source_file: params_18N_ER_Dense_LR0.0024122980321321335_SIGMA0.8605456674562558_INIT1.001744809410076_NUMLAYERS1.npy

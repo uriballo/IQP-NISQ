@@ -1,0 +1,5 @@
+nodes: 8
+graph_type: BP
+hyperparameters:
+  num_layers: 4
+  source_file: params_8N_Bipartite_Sparse_LR0.0036836339453192304_SIGMA0.7428271054083595_INIT0.205636617535598_NUMLAYERS4.npy

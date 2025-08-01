@@ -1,0 +1,5 @@
+nodes: 10
+graph_type: ER
+hyperparameters:
+  num_layers: 1
+  source_file: params_10N_ER_Sparse_LR0.032372631678972856_SIGMA0.7649320273591023_INIT1.5357950633585402_NUMLAYERS1.npy

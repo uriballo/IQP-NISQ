@@ -26,4 +26,4 @@ fixed_params: # chosen based on parameter importance from initial experiments
 
 hpo_search_space:
   learning_rate: [1.0e-4, 1.0e-3]       
-  sigma_multiplier: [0.01, 0.2]
+  sigma_multiplier: [0.01, 1]

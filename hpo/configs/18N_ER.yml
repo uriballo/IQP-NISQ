@@ -21,9 +21,9 @@ final_train_iterations: 1000
 hpo_cv_folds: 3        
 
 fixed_params: 
-  num_layers: 3
+  num_layers: 2
 
 hpo_search_space:
   learning_rate: [1.0e-5, 1.0e-3]       
-  sigma_multiplier: [0.001, 0.2]
+  sigma_multiplier: [0.01, 1]
   initialization_multiplier: [0.1, 1.0]

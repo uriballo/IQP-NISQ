@@ -15,15 +15,15 @@ optimizer: "Adam"
 n_ops: 2000
 n_samples: 2000
 
-hpo_trials: 200              
-hpo_iterations: 550
+hpo_trials: 300              
+hpo_iterations: 600
 final_train_iterations: 1000 
-hpo_cv_folds: 2        
+hpo_cv_folds: 3        
 
-fixed_params: # chosen based on parameter importance from initial experiments
+fixed_params: 
   num_layers: 2
-  initialization_multiplier: 1.0
 
 hpo_search_space:
   learning_rate: [1.0e-5, 1.0e-3]       
-  sigma_multiplier: [0.01, 0.4]
+  sigma_multiplier: [0.01, 1]
+  initialization_multiplier: [0.1, 1.0]

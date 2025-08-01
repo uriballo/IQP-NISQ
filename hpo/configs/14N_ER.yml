@@ -25,5 +25,5 @@ fixed_params:
 
 hpo_search_space:
   learning_rate: [1.0e-5, 1.0e-3]       
-  sigma_multiplier: [0.01, 1.0]
+  sigma_multiplier: [0.01, 1]
   initialization_multiplier: [0.1, 1.0]

@@ -1,0 +1,5 @@
+nodes: 18
+graph_type: BP
+hyperparameters:
+  num_layers: 3
+  source_file: params_18N_Bipartite_Dense_LR0.00012487564616169122_SIGMA0.10502972406872879_INIT0.6702875946169518_NUMLAYERS3.npy

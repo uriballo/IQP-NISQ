@@ -1,0 +1,5 @@
+nodes: 14
+graph_type: ER
+hyperparameters:
+  num_layers: 3
+  source_file: params_14N_ER_Medium_LR0.020808717745815757_SIGMA0.8897430791197918_INIT0.6417265067371234_NUMLAYERS3.npy

@@ -1,0 +1,5 @@
+nodes: 8
+graph_type: BP
+hyperparameters:
+  num_layers: 1
+  source_file: params_8N_Bipartite_Medium_LR0.012529922603919507_SIGMA1.4402562057733146_INIT1.9680596739001786_MAX_WEIGHT5.npy
