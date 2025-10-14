@@ -1,188 +1,282 @@
 import argparse
-import logging
-from pathlib import Path
-import yaml
-
-import matplotlib.pyplot as plt
-import networkx as nx
-import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import seaborn as sns
+from pathlib import Path
+import re
+from matplotlib.backends.backend_pdf import PdfPages
 
-from src.utils.utils import setup_logging
+def plot_best_run_scaling_bars(df: pd.DataFrame, metric_col: str, title: str, ax: plt.Axes):
+    sns.barplot(data=df, x='Nodes', y=metric_col, hue='density', hue_order=['Sparse', 'Medium', 'Dense'],
+                palette='colorblind', ax=ax, errorbar=None)
 
-def extract_node_count(dataset_name: str) -> int:
-    """Extracts the integer node count from a name like '8N_Bipartite_Sparse'."""
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.set_xlabel('Number of Nodes', fontsize=10)
+    ax.set_ylabel(metric_col.replace('_', ' ').replace('diff', 'Error').title(), fontsize=10) # Simplified Y-axis label
+    ax.legend(title='Density', fontsize=8)
+    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+    
+    # Add qubit count to x-tick labels
     try:
-        return int(dataset_name.split('N')[0])
+        labels = [item.get_text() for item in ax.get_xticklabels()]
+        new_labels = [f'{n} ({int(int(n)*(int(n)-1)/2)} qubits)' for n in labels]
+        ax.set_xticklabels(new_labels)
     except (ValueError, IndexError):
-        return 0
+        # In case labels are not purely numeric, we avoid crashing.
+        print(f"Warning: Could not format x-tick labels for '{title}' bar plot.")
 
-def calculate_random_bipartite_baseline(
-    node_counts: list, all_summaries: list, num_samples: int = 512
-) -> list:
-    """
-    For each node count, generates random graphs using the average edge probability
-    from the corresponding Bipartite datasets to find the baseline.
-    """
-    logging.info(f"Calculating random bipartite baseline for nodes: {node_counts}...")
-    baseline_percentages = []
+def plot_best_run_scaling_lines(df: pd.DataFrame, metric_col: str, title: str, ax: plt.Axes):
+    bipartite_df = df[df['Dataset'] == 'Bipartite']
+    er_df = df[df['Dataset'] == 'ER']
 
-    for n in node_counts:
-        # Find all Bipartite datasets for the current node count 'n'
-        relevant_probs = [
-            summary['average_edge_prob'] for summary in all_summaries
-            if summary['name'].startswith(f"{n}N_Bipartite")
-        ]
+    if not bipartite_df.empty:
+        sns.lineplot(data=bipartite_df, x='Nodes', y=metric_col, hue='density',
+                     hue_order=['Sparse', 'Medium', 'Dense'], palette='colorblind',
+                     style=True, dashes=[(1,0)]*3, markers=True,
+                     lw=2.5, ax=ax, markersize=8, errorbar=None, legend='full')
+    if not er_df.empty:
+        sns.lineplot(data=er_df, x='Nodes', y=metric_col, hue='density',
+                     hue_order=['Sparse', 'Medium', 'Dense'], palette='colorblind',
+                     style=True, dashes=[(4,1)]*3, markers=True,
+                     lw=2.5, ax=ax, markersize=8, errorbar=None, legend=False)
 
-        if relevant_probs:
-            target_edge_prob = np.mean(relevant_probs)
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    # --- MODIFIED: Updated X and Y axis labels ---
+    ax.set_xlabel('Number of Nodes', fontsize=10)
+    ax.set_ylabel(metric_col.replace('_', ' ').replace('diff', 'Error').title(), fontsize=10) # Simplified Y-axis label
+
+    handles, labels = ax.get_legend_handles_labels()
+    # Correctly slice legend to only show density types
+    if handles and labels:
+        density_handles = [h for h, l in zip(handles, labels) if l in ['Sparse', 'Medium', 'Dense']]
+        density_labels = [l for l in labels if l in ['Sparse', 'Medium', 'Dense']]
+        if density_handles:
+             ax.legend(density_handles, density_labels, title='Density', fontsize=8)
         else:
-            target_edge_prob = 0.5 
-        
-        logging.info(f"Using average edge probability of {target_edge_prob:.4f} for {n}-node baseline.")
+             ax.legend(title='Density', fontsize=8)
 
-        bipartite_count = 0
-        for _ in range(num_samples):
-            # Create a G(n,p) random graph with the target edge probability
-            G = nx.fast_gnp_random_graph(n, target_edge_prob)
-            if nx.is_bipartite(G):
-                bipartite_count += 1
-        baseline_percentages.append((bipartite_count / num_samples) * 100)
-        
-    return baseline_percentagess
+    ax.grid(True, linestyle='--', alpha=0.7)
+    
+    # --- MODIFIED: Add qubit count to x-tick labels ---
+    nodes = sorted(df['Nodes'].unique())
+    ax.set_xticks(nodes)
+    ax.set_xticklabels([f'{n} ({int(n*(n-1)/2)} qubits)' for n in nodes], rotation=45, ha='right')
 
-
-def plot_bipartite_scaling(df: pd.DataFrame, output_dir: Path):
-    """
-    Generates a line plot for the generated bipartite percentage on real hardware
-    for bipartite datasets.
-    """
-    logging.info("Generating bipartite percentage scaling plot...")
-    # 1. Filter data: Only 'Evaluation' runs on 'Bipartite' datasets
-    plot_df = df[
-        (df['run_type'] == 'Evaluation') &
-        (df['dataset_name'].str.contains('Bipartite'))
-    ].copy()
-
-    if plot_df.empty:
-        logging.warning("No data found for bipartite scaling plot. Skipping.")
+def plot_evaluation_vs_dataset(df: pd.DataFrame, metric_base_name: str, ax: plt.Axes):
+    gen_col = f'generated_{metric_base_name}'
+    data_col = f'dataset_{metric_base_name}'
+    if gen_col not in df.columns or data_col not in df.columns:
+        ax.text(0.5, 0.5, f"Data for '{metric_base_name}'\nnot found.", ha='center', va='center')
+        ax.set_title(f"{metric_base_name.replace('_', ' ').title()}", fontweight='bold')
         return
+    sns.scatterplot(data=df, x=data_col, y=gen_col, hue='Nodes', style='Dataset',s=120, alpha=0.9, ax=ax, palette='Dark2')
+    min_val = min(df[data_col].min(), df[gen_col].min()) * 0.95
+    max_val = max(df[data_col].max(), df[gen_col].max()) * 1.05
+    ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2, label='Ideal')
+    ax.set_title(f"Generated vs. Ground Truth: {metric_base_name.replace('_', ' ').title()}", fontweight='bold')
+    ax.set_xlabel("Dataset Ground Truth", fontsize=10)
+    # --- MODIFIED: Replaced 'Evaluation' with 'NISQ' ---
+    ax.set_ylabel("Generated by Best Model (NISQ)", fontsize=10)
+    ax.legend(fontsize=8, bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.grid(True)
 
-    # 2. Setup plot
-    plt.style.use('seaborn-v0_8_whitegrid')
-    fig, ax = plt.subplots(figsize=(10, 6))
+def plot_evaluation_diff_distribution(df: pd.DataFrame, diff_col: str, ax: plt.Axes):
+    clean_name = diff_col.replace('_', ' ').replace('pct', 'Percentage').replace('diff', 'Difference').title()
+    title = f"Distribution of Absolute Error\nfor {clean_name}"
+    sns.kdeplot(data=df, x=diff_col, fill=True, alpha=0.6, ax=ax, color='navy')
+    ax.set_title(title, fontweight='bold')
+    ax.set_xlabel("Absolute Difference from Ground Truth", fontsize=10)
+    ax.set_ylabel("Density", fontsize=10)
+    ax.grid(True)
 
-    # 3. Draw lines for each model type (Sparse, Medium, Dense)
-    sns.lineplot(
-        data=plot_df, x='nodes', y='generated_bipartite_pct', hue='model',
-        style='model', markers=True, dashes=False, lw=2.5, ax=ax
-    )
+def plot_simulation_vs_evaluation_8N_all(df: pd.DataFrame, metric_col: str, ax: plt.Axes):
+    df_8n = df[df['num_nodes'] == 8].copy()
+    
+    # Pivot on the common_run_key for accurate pairing
+    pivot_df = df_8n.pivot_table(
+        index=['common_run_key', 'density'], columns='run_type', values=metric_col
+    ).reset_index().dropna(subset=['Simulation', 'Evaluation'])
 
-    # 4. Calculate and draw the random baseline
-    node_counts = sorted(plot_df['nodes'].unique())
-    baseline_values = calculate_random_bipartite_baseline(node_counts)
-    ax.plot(node_counts, baseline_values, label='Random Baseline', color='grey', linestyle='--', zorder=1)
-
-    # 5. Customize axes and title
-    ax.set_title('Bipartite Graph Percentage (Hardware Evaluation)', fontsize=16, pad=20)
-    ax.set_ylabel('Generated Bipartite Graphs (%)', fontsize=12)
-    ax.set_xlabel('Graph Size', fontsize=12)
-    ax.legend(title='Model Type')
-
-    # Create custom x-axis labels
-    tick_labels = {
-        n: f"{n} Nodes\n({n*(n-1)//2} Qubits)" for n in node_counts
-    }
-    ax.set_xticks(node_counts)
-    ax.set_xticklabels([tick_labels[n] for n in node_counts])
-
-    # 6. Save figure
-    save_path = output_dir / "bipartite_percentage_scaling.png"
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close()
-    logging.info(f"✅ Plot saved to {save_path}")
-
-def plot_edge_error_scaling(df: pd.DataFrame, output_dir: Path):
-    """
-    Generates a line plot for the absolute edge probability error on real hardware
-    for all dataset types.
-    """
-    logging.info("Generating edge probability error scaling plot...")
-    # 1. Filter data: Only 'Evaluation' runs
-    plot_df = df[df['run_type'] == 'Evaluation'].copy()
-
-    if plot_df.empty:
-        logging.warning("No data found for edge error scaling plot. Skipping.")
+    if pivot_df.empty:
+        ax.text(0.5, 0.5, "Not enough paired data for\n8-Node Sim vs. NISQ comparison", ha='center', va='center')
+        ax.set_title(f"8-Node Simulation vs. NISQ", fontweight='bold')
         return
+        
+    sns.scatterplot(data=pivot_df, x='Simulation', y='Evaluation', hue='density',hue_order=['Sparse', 'Medium', 'Dense'], style='density',s=120, alpha=0.9, ax=ax, palette='colorblind')
+    min_val = min(pivot_df['Simulation'].min(), pivot_df['Evaluation'].min()) * 0.95
+    max_val = max(pivot_df['Simulation'].max(), pivot_df['Evaluation'].max()) * 1.05
+    ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2, label='Ideal')
+    clean_metric_name = metric_col.replace('_', ' ').replace('gen ', '').replace('pct', 'Percentage').replace('diff', 'Difference').title()
+    ax.set_title(f"8-Node Sim vs. NISQ: {clean_metric_name}", fontweight='bold')
+    ax.set_xlabel("Simulation Result", fontsize=10)
+    ax.set_ylabel("NISQ Result", fontsize=10)
+    ax.legend(title='Density', fontsize=8)
+    ax.grid(True)
 
-    # 2. Setup plot
-    plt.style.use('seaborn-v0_8_whitegrid')
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    # 3. Draw lines for each model type
-    sns.lineplot(
-        data=plot_df, x='nodes', y='abs_edge_prob_diff', hue='model',
-        style='model', markers=True, dashes=False, lw=2.5, ax=ax
-    )
-
-    # 4. Customize axes and title
-    ax.set_title('Absolute Edge Probability Error (Hardware Evaluation)', fontsize=16, pad=20)
-    ax.set_ylabel('Absolute Error in Edge Probability', fontsize=12)
-    ax.set_xlabel('Graph Size', fontsize=12)
-    ax.legend(title='Model Type')
-
-    # Create custom x-axis labels
-    node_counts = sorted(plot_df['nodes'].unique())
-    tick_labels = {
-        n: f"{n} Nodes\n({n*(n-1)//2} Qubits)" for n in node_counts
-    }
-    ax.set_xticks(node_counts)
-    ax.set_xticklabels([tick_labels[n] for n in node_counts])
-
-    # 5. Save figure
-    save_path = output_dir / "edge_probability_error_scaling.png"
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close()
-    logging.info(f"✅ Plot saved to {save_path}")
+def plot_er_bipartite_generation(df: pd.DataFrame, ax: plt.Axes):
+    er_df = df[(df['run_type'] == 'Evaluation') & (df['graph_type'] == 'ER')].copy()
+    if er_df.empty:
+        ax.text(0.5, 0.5, "No data found for ER models.", ha='center', va='center')
+        return
+    sns.barplot(data=er_df, x='grouping_key', y='generated_bipartite_pct', palette='viridis', ax=ax, order=sorted(er_df['grouping_key'].unique()))
+    ax.set_title("Bipartite Graphs Generated by ER Models (NISQ Runs)", fontsize=16, fontweight='bold')
+    ax.set_xlabel("ER Model Type", fontsize=12)
+    ax.set_ylabel("Avg. Generated Bipartite %", fontsize=12)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
 
 
 def main(args: argparse.Namespace):
-    """Main function to load data and generate plots."""
-    setup_logging()
-    input_csv = args.input_csv
-
-    if not input_csv.is_file():
-        logging.error(f"Input CSV file not found: {input_csv}")
+    if not args.summary_file.is_file():
+        print(f"Error: Summary file not found at '{args.summary_file}'")
         return
 
-    logging.info(f"Loading data from {input_csv}...")
-    df = pd.read_csv(input_csv)
+    print(f"Loading data from '{args.summary_file}'...")
+    df = pd.read_csv(args.summary_file)
+    
+    try:
+        # Using a more robust LaTeX font setting
+        plt.rcParams.update({
+            "text.usetex": True,
+            "font.family": "serif",
+            "font.serif": ["Computer Modern Roman", "Times New Roman"],
+        })
+        print("Successfully configured Matplotlib to use LaTeX fonts.")
+    except Exception as e:
+        print(f"Warning: Could not set LaTeX font. Using default. Error: {e}")
 
-    df['nodes'] = df['dataset_name'].apply(extract_node_count)
-    df['abs_edge_prob_diff'] = df['edge_prob_diff'].abs()
+    # --- Data Filtering and Preprocessing ---
+    df = df[df['num_nodes'] != 14].copy()
+    print(f"Removed 14N data. Remaining entries: {len(df)}")
+    
+    df.rename(columns={
+        'gen_avg_clustering_coeff': 'generated_avg_clustering_coeff',
+        'gen_avg_shortest_path': 'generated_avg_shortest_path',
+        'clustering_coeff_diff': 'generated_avg_clustering_coeff_diff',
+        'avg_shortest_path_diff': 'generated_avg_shortest_path_diff'
+    }, inplace=True)
+    
+    for col in df.columns:
+        if col.endswith('_diff'):
+            df[col] = df[col].abs()
+            
+    if 'bipartite_pct_diff' not in df.columns:
+        df['bipartite_pct_diff'] = (df['generated_bipartite_pct'] - df['dataset_bipartite_pct']).abs()
 
-    output_dir = args.output_dir
-    output_dir.mkdir(parents=True, exist_ok=True)
+    def get_density(name_str):
+        if 'Sparse' in name_str: return 'Sparse'
+        if 'Medium' in name_str: return 'Medium'
+        if 'Dense' in name_str: return 'Dense'
+        return 'N/A'
 
-    plot_bipartite_scaling(df, output_dir)
-    plot_edge_error_scaling(df, output_dir)
+    def get_graph_type(name_str):
+        if 'Bipartite' in name_str: return 'Bipartite'
+        if 'ER' in name_str: return 'ER'
+        return 'Unknown'
+
+    df['density'] = df['dataset_name'].apply(get_density)
+    df['graph_type'] = df['dataset_name'].apply(get_graph_type)
+    df['grouping_key'] = df['num_nodes'].astype(str) + 'N_' + df['graph_type'] + '_' + df['density']
+    
+    # Create a common key for pairing sim/eval runs
+    df['common_run_key'] = df['run_id'].str.replace('simulation_results/', '', regex=False).str.replace('evaluation_results/', '', regex=False)
+    
+    eval_df = df[df['run_type'] == 'Evaluation'].copy()
+    
+    idx_edge_prob = eval_df.groupby('grouping_key')['edge_prob_diff'].idxmin()
+    best_by_edge_prob = eval_df.loc[idx_edge_prob].copy()
+    best_by_edge_prob.rename(columns={'num_nodes': 'Nodes'}, inplace=True)
+    best_by_edge_prob['Dataset'] = best_by_edge_prob['grouping_key'].apply(lambda x: 'Bipartite' if 'Bipartite' in x else 'ER')
+
+    idx_bipartite = eval_df.groupby('grouping_key')['generated_bipartite_pct'].idxmax()
+    best_by_bipartite_pct = eval_df.loc[idx_bipartite].copy()
+    best_by_bipartite_pct.rename(columns={'num_nodes': 'Nodes'}, inplace=True)
+    best_by_bipartite_pct['Dataset'] = best_by_bipartite_pct['grouping_key'].apply(lambda x: 'Bipartite' if 'Bipartite' in x else 'ER')
+
+    output_path = args.summary_file.parent / 'performance_report.pdf'
+    
+    with PdfPages(output_path) as pdf:
+        # The plotting pages remain the same, but functions are now modified
+        for plot_func, plot_type in zip([plot_best_run_scaling_bars, plot_best_run_scaling_lines], ["Bar Plots", "Line Plots"]):
+            fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+            fig.suptitle(f"Best Run Performance (by Edge Probability Error) - {plot_type}", fontsize=20, fontweight='bold')
+            plot_func(best_by_edge_prob[best_by_edge_prob['Dataset'] == 'Bipartite'], 'generated_bipartite_pct', 'Bipartite Percentage', axes[0, 0])
+            plot_func(best_by_edge_prob, 'edge_prob_diff', 'Edge Probability Absolute Error', axes[0, 1])
+            plot_func(best_by_edge_prob, 'generated_avg_clustering_coeff_diff', 'Clustering Coefficient Error', axes[1, 0])
+            plot_func(best_by_edge_prob, 'generated_avg_shortest_path_diff', 'Avg. Shortest Path Error', axes[1, 1])
+            plt.tight_layout(rect=[0, 0.03, 1, 0.96])
+            pdf.savefig(fig)
+            plt.close()
+
+        for plot_func, plot_type in zip([plot_best_run_scaling_bars, plot_best_run_scaling_lines], ["Bar Plots", "Line Plots"]):
+            fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+            fig.suptitle(f"Best Run Performance (by Bipartite % Accuracy) - {plot_type}", fontsize=20, fontweight='bold')
+            plot_func(best_by_bipartite_pct[best_by_bipartite_pct['Dataset'] == 'Bipartite'], 'generated_bipartite_pct', 'Bipartite Percentage', axes[0, 0])
+            plot_func(best_by_bipartite_pct, 'edge_prob_diff', 'Edge Probability Absolute Error', axes[0, 1])
+            plot_func(best_by_bipartite_pct, 'generated_avg_clustering_coeff_diff', 'Clustering Coefficient Error', axes[1, 0])
+            plot_func(best_by_bipartite_pct, 'generated_avg_shortest_path_diff', 'Avg. Shortest Path Error', axes[1, 1])
+            plt.tight_layout(rect=[0, 0.03, 1, 0.96])
+            pdf.savefig(fig)
+            plt.close()
+        
+        fig, axes = plt.subplots(1, 2, figsize=(18, 7))
+        # --- MODIFIED: Replaced 'Evaluation' with 'NISQ' ---
+        fig.suptitle(r"NISQ vs. Dataset (Best Runs by Edge Prob. Error)", fontsize=20, fontweight='bold')
+        plot_evaluation_vs_dataset(best_by_edge_prob, 'edge_prob', axes[0])
+        plot_evaluation_vs_dataset(best_by_edge_prob, 'mean_degree', axes[1])
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        pdf.savefig(fig)
+        plt.close()
+
+        fig, axes = plt.subplots(1, 2, figsize=(18, 7))
+        # --- MODIFIED: Replaced 'Evaluation' with 'NISQ' ---
+        fig.suptitle(r"NISQ vs. Dataset (Best Runs by Bipartite % Accuracy)", fontsize=20, fontweight='bold')
+        plot_evaluation_vs_dataset(best_by_bipartite_pct, 'edge_prob', axes[0])
+        plot_evaluation_vs_dataset(best_by_bipartite_pct, 'mean_degree', axes[1])
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        pdf.savefig(fig)
+        plt.close()
+
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        # --- MODIFIED: Replaced 'Evaluation' with 'NISQ' ---
+        fig.suptitle(r"Distribution of Absolute Errors (All NISQ Runs)", fontsize=20, fontweight='bold')
+        plot_evaluation_diff_distribution(eval_df, 'edge_prob_diff', axes[0, 0])
+        plot_evaluation_diff_distribution(eval_df, 'bipartite_pct_diff', axes[0, 1])
+        plot_evaluation_diff_distribution(eval_df, 'generated_avg_clustering_coeff_diff', axes[1, 0])
+        plot_evaluation_diff_distribution(eval_df, 'generated_avg_shortest_path_diff', axes[1, 1])
+        plt.tight_layout(rect=[0, 0.03, 1, 0.96])
+        pdf.savefig(fig)
+        plt.close()
+
+        fig, axes = plt.subplots(2, 2, figsize=(18, 14))
+        # --- MODIFIED: Replaced 'Hardware Evaluation' with 'NISQ' ---
+        fig.suptitle(r"8-Node Graphs: Simulation vs. NISQ (All Runs)", fontsize=20, fontweight='bold')
+        plot_simulation_vs_evaluation_8N_all(df, 'generated_edge_prob', axes[0, 0])
+        plot_simulation_vs_evaluation_8N_all(df, 'generated_avg_clustering_coeff', axes[0, 1])
+        plot_simulation_vs_evaluation_8N_all(df, 'bipartite_pct_diff', axes[1, 0])
+        plot_simulation_vs_evaluation_8N_all(df, 'generated_avg_shortest_path_diff', axes[1, 1])
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        pdf.savefig(fig)
+        plt.close()
+        
+        fig, ax = plt.subplots(figsize=(14, 8))
+        plot_er_bipartite_generation(df, ax)
+        plt.tight_layout()
+        pdf.savefig(fig)
+        plt.close()
+
+    print(f"\n✅ Comprehensive PDF report saved successfully to '{output_path}'")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Generate scaling plots from analysis summary CSV."
+        description="Generate a multi-page PDF report from the master analysis summary CSV."
     )
     parser.add_argument(
-        "results/master_analysis_summary.csv",
+        "--summary-file",
         type=Path,
-        help="Path to the master_analysis_summary.csv file."
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=Path("results/plots"),
-        help="Directory to save the generated plots. Default: './results/plots'"
+        default=Path("results/master_analysis_summary_with_run_id.csv"),
+        help="Path to the master analysis summary CSV file."
     )
     args = parser.parse_args()
     main(args)

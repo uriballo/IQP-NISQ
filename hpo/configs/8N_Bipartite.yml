@@ -18,10 +18,10 @@ n_samples: 2000
 hpo_trials: 300              
 hpo_iterations: 600
 final_train_iterations: 1000 
-hpo_cv_folds: 3        
+hpo_cv_folds: 5        
 
 fixed_params: 
-  num_layers: 1
+  num_layers: 2
 
 hpo_search_space:
   learning_rate: [1.0e-5, 1.0e-3]       

@@ -1,3 +1,4 @@
+# evaluate_on_nisq.py
 import argparse
 import logging
 import os
@@ -31,7 +32,7 @@ def setup_ibmq_backend(min_qubits: int, shots: int, save: bool = False) -> qml.d
     if save:
         QiskitRuntimeService.save_account(channel="ibm_quantum", token=ibm_token, overwrite=True)
 
-    service = QiskitRuntimeService(channel="ibm_cloud", token = ibm_token, instance=instance)
+    service = QiskitRuntimeService(channel="ibm_cloud", token=ibm_token, instance=instance)
 
     logging.info(f"Finding least busy backend with at least {min_qubits} qubits...")
     backend = service.least_busy(operational=True, simulator=False, min_num_qubits=min_qubits)
@@ -50,9 +51,9 @@ def setup_ibmq_backend(min_qubits: int, shots: int, save: bool = False) -> qml.d
     return device
 
 
-def evaluate_model(model_dir: Path, qiskit_device: qml.device, shots: int):
+def evaluate_model(model_dir: Path, base_dir: Path, qiskit_device: qml.device, shots: int):
     """Loads a single model, evaluates it on hardware, and saves the samples."""
-    logging.info(f"--- Evaluating model: {model_dir.relative_to(model_dir.parents[2])} ---")
+    logging.info(f"--- Evaluating model: {model_dir.relative_to(base_dir)} ---")
 
     params, metadata = load_model_from_dir(model_dir)
     if params is None:
@@ -79,32 +80,36 @@ def evaluate_model(model_dir: Path, qiskit_device: qml.device, shots: int):
 def main(args: argparse.Namespace):
     """Finds and evaluates selected models on real hardware."""
     setup_logging()
-    base_dir = args.base_dir
+    base_dir = args.base_dir.resolve()
     if not base_dir.is_dir():
         logging.error(f"Base directory not found at: {base_dir}")
         return
 
-    # 1. Discover all potential models by finding their config files
+    # 1. Discover all models by finding their hyperparams.yml files
     all_models = [p.parent for p in base_dir.rglob('hyperparams.yml')]
-    logging.info(f"Found {len(all_models)} total trained models in '{base_dir}'.")
+    logging.info(f"Found {len(all_models)} total structured models in '{base_dir}'.")
 
-    # 2. Filter models based on include/exclude criteria
+    # 2. Filter models based on run type and include/exclude criteria
     models_to_run = []
-    if args.include:
-        for model_path in all_models:
-            # e.g., get '8N_Bipartite' from the full path
-            node_dir_name = model_path.parts[-3]
-            node_count_str = node_dir_name.split('_')[0] # '8N'
-            if node_count_str in args.include:
-                models_to_run.append(model_path)
-    elif args.exclude:
-        for model_path in all_models:
-            node_dir_name = model_path.parts[-3]
-            node_count_str = node_dir_name.split('_')[0]
-            if node_count_str not in args.exclude:
-                models_to_run.append(model_path)
-    else:
-        models_to_run = all_models
+    for model_path in all_models:
+        with open(model_path / 'hyperparams.yml', 'r') as f:
+            meta = yaml.safe_load(f)
+
+        # Filter by run type (legacy vs new)
+        is_legacy = 'source_file' in meta.get('hyperparameters', {})
+        if args.run_type == 'legacy' and not is_legacy:
+            continue
+        if args.run_type == 'new' and is_legacy:
+            continue
+
+        # Filter by node count
+        node_count_str = f"{meta.get('nodes', 0)}N"
+        if args.include and node_count_str not in args.include:
+            continue
+        if args.exclude and node_count_str in args.exclude:
+            continue
+        
+        models_to_run.append(model_path)
 
     if not models_to_run:
         logging.warning("No models match the selection criteria. Nothing to evaluate.")
@@ -113,13 +118,12 @@ def main(args: argparse.Namespace):
     logging.info(f"--- Preparing to evaluate {len(models_to_run)} model(s) ---")
 
     # 3. Set up the hardware backend once for all evaluations
-    # This uses a fixed high number to get a capable backend for all potential runs.
     num_qubits_required = 153 # Sufficient for up to 18-node graphs
     qiskit_device = setup_ibmq_backend(min_qubits=num_qubits_required, shots=args.shots)
 
     # 4. Loop through and evaluate only the selected models
     for model_dir in sorted(models_to_run):
-        evaluate_model(model_dir, qiskit_device, args.shots)
+        evaluate_model(model_dir, base_dir, qiskit_device, args.shots)
 
     logging.info("\n===== 🎉 All selected evaluations complete! =====")
 
@@ -131,8 +135,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--base-dir",
         type=Path,
-        default=Path("results/trained_params"),
-        help="Base directory containing all trained model parameters."
+        default=Path("results/"),
+        help="Base directory containing all structured model runs."
     )
     parser.add_argument(
         "--shots",
@@ -140,7 +144,14 @@ if __name__ == "__main__":
         default=512,
         help="Number of shots to use for sampling."
     )
-    # Create a mutually exclusive group for include/exclude
+    parser.add_argument(
+        "--run-type",
+        type=str,
+        choices=['all', 'legacy', 'new'],
+        default='all',
+        help="Type of runs to evaluate."
+    )
+    
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--include",

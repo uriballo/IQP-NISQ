@@ -18,7 +18,7 @@ n_samples: 2000
 hpo_trials: 200              
 hpo_iterations: 500
 final_train_iterations: 1000 
-hpo_cv_folds: 2        
+hpo_cv_folds: 5        
 
 fixed_params: # chosen based on parameter importance from initial experiments
   num_layers: 1
