@@ -1,0 +1,16 @@
+dataset_name,density,ref_density,ref_bipartite_percent,ref_bipartivity,gen_density,gen_bipartite_percent,gen_bipartivity,path,num_samples,mmd,memorized,diversity
+8N_ER_Dense,Dense,0.7618,0.0000,1.0000,0.7003,0.0000,0.5861,results/simulation_results/8N_ER/run_20250709_142102/Dense/simulated_samples_20250721.npy,512,0.009823539806897097,0.4004,0.6152
+8N_ER_Medium,Medium,0.4420,0.5000,1.0000,0.4610,3.1250,0.7701,results/simulation_results/8N_ER/run_20250709_142102/Medium/simulated_samples_20250721.npy,512,-0.0005128695300433694,0.0312,0.9629
+8N_ER_Sparse,Sparse,0.2207,51.5000,1.0000,0.2862,31.8359,0.9094,results/simulation_results/8N_ER/run_20250709_142102/Sparse/simulated_samples_20250721.npy,512,0.010254248924109977,0.4199,0.5645
+8N_Bipartite_Dense,Dense,0.3110,100.0000,1.0000,0.3503,29.6875,0.9088,results/simulation_results/8N_Bipartite/run_20250709_142105/Dense/simulated_samples_20250721.npy,512,0.020751496115207657,0.2676,0.7480
+8N_Bipartite_Medium,Medium,0.2887,100.0000,1.0000,0.3313,30.8594,0.9102,results/simulation_results/8N_Bipartite/run_20250709_142105/Medium/simulated_samples_20250721.npy,512,0.024716703219159974,0.3047,0.6934
+8N_Bipartite_Sparse,Sparse,0.2256,100.0000,1.0000,0.2550,62.3047,0.9616,results/simulation_results/8N_Bipartite/run_20250709_142105/Sparse/simulated_samples_20250721.npy,512,0.00485884767384237,0.5332,0.3809
+8N_Bipartite_Dense,Dense,0.3110,100.0000,1.0000,0.3511,24.6094,0.9011,results/simulation_results/8N_Bipartite/run_20250708_220824/Dense/simulated_samples_20250721.npy,512,0.02232556296995858,0.2129,0.7090
+8N_Bipartite_Medium,Medium,0.2887,100.0000,1.0000,0.3324,29.2969,0.9139,results/simulation_results/8N_Bipartite/run_20250708_220824/Medium/simulated_samples_20250721.npy,512,0.02152407902616127,0.2812,0.6406
+8N_Bipartite_Sparse,Sparse,0.2256,100.0000,1.0000,0.2675,50.5859,0.9477,results/simulation_results/8N_Bipartite/run_20250708_220824/Sparse/simulated_samples_20250721.npy,512,0.01088590337658113,0.4551,0.4688
+8N_Bipartite_Dense,Dense,0.3110,100.0000,1.0000,0.3308,34.5703,0.9199,results/simulation_results/8N_Bipartite/run_20250714_104340/Dense/simulated_samples_20250721.npy,512,0.02388202556868735,0.2930,0.6230
+8N_Bipartite_Medium,Medium,0.2887,100.0000,1.0000,0.3144,35.9375,0.9242,results/simulation_results/8N_Bipartite/run_20250714_104340/Medium/simulated_samples_20250721.npy,512,0.02541035132971392,0.3594,0.6113
+8N_Bipartite_Sparse,Sparse,0.2256,100.0000,1.0000,0.2618,54.8828,0.9516,results/simulation_results/8N_Bipartite/run_20250714_104340/Sparse/simulated_samples_20250721.npy,512,0.012625412153274063,0.4863,0.4121
+8N_Bipartite_Dense,Dense,0.3110,100.0000,1.0000,0.2403,63.0859,0.9606,results/simulation_results/8N_Bipartite/run_20250715_165138/Dense/simulated_samples_20250721.npy,512,0.03989980602610521,0.4531,0.3594
+8N_Bipartite_Medium,Medium,0.2887,100.0000,1.0000,0.2704,52.1484,0.9461,results/simulation_results/8N_Bipartite/run_20250715_165138/Medium/simulated_samples_20250721.npy,512,0.027007113488468737,0.5195,0.4648
+8N_Bipartite_Sparse,Sparse,0.2256,100.0000,1.0000,0.2255,69.3359,0.9730,results/simulation_results/8N_Bipartite/run_20250715_165138/Sparse/simulated_samples_20250721.npy,512,0.005065055261445073,0.6328,0.2656

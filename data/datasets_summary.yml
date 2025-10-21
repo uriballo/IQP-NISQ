@@ -2,323 +2,287 @@
   nodes: 8
   graph_type: Bipartite
   density_category: Dense
-  density_value: 0.31102900930487143
-  var_degree_dist_value: 1.3459937097224062
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 261
+  average_density: 0.31102900930487143
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 8N_Bipartite_Medium
   nodes: 8
   graph_type: Bipartite
   density_category: Medium
-  density_value: 0.28874538745387424
-  var_degree_dist_value: 1.2809151223431057
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 271
+  average_density: 0.28874538745387424
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 8N_Bipartite_Sparse
   nodes: 8
   graph_type: Bipartite
   density_category: Sparse
-  density_value: 0.22556390977443602
-  var_degree_dist_value: 1.0012861100118715
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 133
+  average_density: 0.22556390977443602
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 8N_ER_Dense
   nodes: 8
   graph_type: ER
   density_category: Dense
-  density_value: 0.7617857142857141
-  var_degree_dist_value: 1.1481937500000043
-  tri_value: 24.365
-  bipartite_value: 0.0
-
+  num_samples: 200
+  average_density: 0.7617857142857141
+  bipartite_percentage: 0.0
+  average_bipartiteness: 0.5545234823190317
 - name: 8N_ER_Medium
   nodes: 8
   graph_type: ER
   density_category: Medium
-  density_value: 0.4419642857142859
-  var_degree_dist_value: 1.4612109375000006
-  tri_value: 4.31
-  bipartite_value: 0.5
-
+  num_samples: 200
+  average_density: 0.4419642857142859
+  bipartite_percentage: 0.5
+  average_bipartiteness: 0.7906712000019114
 - name: 8N_ER_Sparse
   nodes: 8
   graph_type: ER
   density_category: Sparse
-  density_value: 0.22071428571428572
-  var_degree_dist_value: 1.0829750000000002
-  tri_value: 0.565
-  bipartite_value: 51.5
-
+  num_samples: 200
+  average_density: 0.22071428571428572
+  bipartite_percentage: 51.5
+  average_bipartiteness: 0.9560768761329195
 - name: 10N_Bipartite_Dense
   nodes: 10
   graph_type: Bipartite
   density_category: Dense
-  density_value: 0.34698795180722874
-  var_degree_dist_value: 2.2077892292059804
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 498
+  average_density: 0.34698795180722874
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 10N_Bipartite_Medium
   nodes: 10
   graph_type: Bipartite
   density_category: Medium
-  density_value: 0.23066666666666702
-  var_degree_dist_value: 1.7150239999999997
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 500
+  average_density: 0.23066666666666702
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 10N_Bipartite_Sparse
   nodes: 10
   graph_type: Bipartite
   density_category: Sparse
-  density_value: 0.1770730561428243
-  var_degree_dist_value: 1.1460908509848968
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 473
+  average_density: 0.1770730561428243
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 10N_ER_Dense
   nodes: 10
   graph_type: ER
   density_category: Dense
-  density_value: 0.7884444444444423
-  var_degree_dist_value: 1.4611839999999958
-  tri_value: 58.654
-  bipartite_value: 0.0
-
+  num_samples: 500
+  average_density: 0.7884444444444423
+  bipartite_percentage: 0.0
+  average_bipartiteness: 0.5148686989595723
 - name: 10N_ER_Medium
   nodes: 10
   graph_type: ER
   density_category: Medium
-  density_value: 0.43804444444444485
-  var_degree_dist_value: 2.1394822399999978
-  tri_value: 9.988
-  bipartite_value: 0.2
-
+  num_samples: 500
+  average_density: 0.43804444444444485
+  bipartite_percentage: 0.2
+  average_bipartiteness: 0.6994063515706036
 - name: 10N_ER_Sparse
   nodes: 10
   graph_type: ER
   density_category: Sparse
-  density_value: 0.19186666666666705
-  var_degree_dist_value: 1.3329617600000003
-  tri_value: 0.842
-  bipartite_value: 33.800000000000004
-
+  num_samples: 500
+  average_density: 0.19186666666666705
+  bipartite_percentage: 33.800000000000004
+  average_bipartiteness: 0.9473840379898746
 - name: 12N_Bipartite_Dense
   nodes: 12
   graph_type: Bipartite
   density_category: Dense
-  density_value: 0.37014296187683304
-  var_degree_dist_value: 3.2821757527965687
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 496
+  average_density: 0.37014296187683304
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 12N_Bipartite_Medium
   nodes: 12
   graph_type: Bipartite
   density_category: Medium
-  density_value: 0.2126373960041297
-  var_degree_dist_value: 2.1566143866445877
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 499
+  average_density: 0.2126373960041297
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 12N_Bipartite_Sparse
   nodes: 12
   graph_type: Bipartite
   density_category: Sparse
-  density_value: 0.12479338842975185
-  var_degree_dist_value: 1.1728588919498006
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 495
+  average_density: 0.12479338842975185
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 12N_ER_Dense
   nodes: 12
   graph_type: ER
   density_category: Dense
-  density_value: 0.8130909090909095
-  var_degree_dist_value: 1.8771973333333136
-  tri_value: 119.314
-  bipartite_value: 0.0
-
+  num_samples: 500
+  average_density: 0.8130909090909095
+  bipartite_percentage: 0.0
+  average_bipartiteness: 0.5036593306026981
 - name: 12N_ER_Medium
   nodes: 12
   graph_type: ER
   density_category: Medium
-  density_value: 0.43963636363636405
-  var_degree_dist_value: 2.7174373333333293
-  tri_value: 18.74
-  bipartite_value: 0.0
-
+  num_samples: 500
+  average_density: 0.43963636363636405
+  bipartite_percentage: 0.0
+  average_bipartiteness: 0.6325362017785211
 - name: 12N_ER_Sparse
   nodes: 12
   graph_type: ER
   density_category: Sparse
-  density_value: 0.16678787878787968
-  var_degree_dist_value: 1.5713315555555551
-  tri_value: 0.982
-  bipartite_value: 32.6
-
+  num_samples: 500
+  average_density: 0.16678787878787968
+  bipartite_percentage: 32.6
+  average_bipartiteness: 0.9485059004631593
 - name: 14N_Bipartite_Dense
   nodes: 14
   graph_type: Bipartite
   density_category: Dense
-  density_value: 0.3726544811971947
-  var_degree_dist_value: 4.387164743829903
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 995
+  average_density: 0.3726544811971947
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 14N_Bipartite_Medium
   nodes: 14
   graph_type: Bipartite
   density_category: Medium
-  density_value: 0.20842820842820922
-  var_degree_dist_value: 2.7294623176219055
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 999
+  average_density: 0.20842820842820922
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 14N_Bipartite_Sparse
   nodes: 14
   graph_type: Bipartite
   density_category: Sparse
-  density_value: 0.10419128610083458
-  var_degree_dist_value: 1.2634274644682753
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 995
+  average_density: 0.10419128610083458
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 14N_ER_Dense
   nodes: 14
   graph_type: ER
   density_category: Dense
-  density_value: 0.8144615384615355
-  var_degree_dist_value: 2.4346845714285905
-  tri_value: 199.41
-  bipartite_value: 0.0
-
+  num_samples: 1000
+  average_density: 0.8144615384615355
+  bipartite_percentage: 0.0
+  average_bipartiteness: 0.5010566507135308
 - name: 14N_ER_Medium
   nodes: 14
   graph_type: ER
   density_category: Medium
-  density_value: 0.44874725274725336
-  var_degree_dist_value: 3.362491918367347
-  tri_value: 33.358
-  bipartite_value: 0.0
-
+  num_samples: 1000
+  average_density: 0.44874725274725336
+  bipartite_percentage: 0.0
+  average_bipartiteness: 0.5776790788687965
 - name: 14N_ER_Sparse
   nodes: 14
   graph_type: ER
   density_category: Sparse
-  density_value: 0.15745054945055034
-  var_degree_dist_value: 1.9375186938775517
-  tri_value: 1.635
-  bipartite_value: 27.900000000000002
-
+  num_samples: 1000
+  average_density: 0.15745054945055034
+  bipartite_percentage: 27.900000000000002
+  average_bipartiteness: 0.9318222898800663
 - name: 16N_Bipartite_Dense
   nodes: 16
   graph_type: Bipartite
   density_category: Dense
-  density_value: 0.3759631490787268
-  var_degree_dist_value: 5.925278086411954
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 995
+  average_density: 0.3759631490787268
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 16N_Bipartite_Medium
   nodes: 16
   graph_type: Bipartite
   density_category: Medium
-  density_value: 0.20511344678011328
-  var_degree_dist_value: 3.3370848169240332
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 999
+  average_density: 0.20511344678011328
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 16N_Bipartite_Sparse
   nodes: 16
   graph_type: Bipartite
   density_category: Sparse
-  density_value: 0.08617538564721687
-  var_degree_dist_value: 1.2894929783681972
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 994
+  average_density: 0.08617538564721687
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 16N_ER_Dense
   nodes: 16
   graph_type: ER
   density_category: Dense
-  density_value: 0.8199500000000007
-  var_degree_dist_value: 2.9526994375000015
-  tri_value: 313.628
-  bipartite_value: 0.0
-
+  num_samples: 1000
+  average_density: 0.8199500000000007
+  bipartite_percentage: 0.0
+  average_bipartiteness: 0.5002946065524909
 - name: 16N_ER_Medium
   nodes: 16
   graph_type: ER
   density_category: Medium
-  density_value: 0.4447583333333334
-  var_degree_dist_value: 4.0977556093749925
-  tri_value: 50.616
-  bipartite_value: 0.0
-
+  num_samples: 1000
+  average_density: 0.4447583333333334
+  bipartite_percentage: 0.0
+  average_bipartiteness: 0.549877174491589
 - name: 16N_ER_Sparse
   nodes: 16
   graph_type: ER
   density_category: Sparse
-  density_value: 0.153183333333333
-  var_degree_dist_value: 2.460469937499999
-  tri_value: 2.556
-  bipartite_value: 22.0
-
+  num_samples: 1000
+  average_density: 0.153183333333333
+  bipartite_percentage: 22.0
+  average_bipartiteness: 0.9117445676352148
 - name: 18N_Bipartite_Dense
   nodes: 18
   graph_type: Bipartite
   density_category: Dense
-  density_value: 0.3696521824810325
-  var_degree_dist_value: 8.172784188951454
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 995
+  average_density: 0.3696521824810325
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 18N_Bipartite_Medium
   nodes: 18
   graph_type: Bipartite
   density_category: Medium
-  density_value: 0.19671368881554047
-  var_degree_dist_value: 4.095110865487625
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 998
+  average_density: 0.19671368881554047
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 18N_Bipartite_Sparse
   nodes: 18
   graph_type: Bipartite
   density_category: Sparse
-  density_value: 0.07471537001897591
-  var_degree_dist_value: 1.363056784021274
-  tri_value: 0.0
-  bipartite_value: 100.0
-
+  num_samples: 992
+  average_density: 0.07471537001897591
+  bipartite_percentage: 100.0
+  average_bipartiteness: 1.0
 - name: 18N_ER_Dense
   nodes: 18
   graph_type: ER
   density_category: Dense
-  density_value: 0.8254640522875818
-  var_degree_dist_value: 3.5899183209876355
-  tri_value: 467.49
-  bipartite_value: 0.0
-
+  num_samples: 1000
+  average_density: 0.8254640522875818
+  bipartite_percentage: 0.0
+  average_bipartiteness: 0.5000756367847
 - name: 18N_ER_Medium
   nodes: 18
   graph_type: ER
   density_category: Medium
-  density_value: 0.4427908496732029
-  var_degree_dist_value: 4.940024580246906
-  tri_value: 73.941
-  bipartite_value: 0.0
-
+  num_samples: 1000
+  average_density: 0.4427908496732029
+  bipartite_percentage: 0.0
+  average_bipartiteness: 0.5310028596979395
 - name: 18N_ER_Sparse
   nodes: 18
   graph_type: ER
   density_category: Sparse
-  density_value: 0.14967973856209246
-  var_degree_dist_value: 2.85345924691358
-  tri_value: 3.64
-  bipartite_value: 17.7
-
+  num_samples: 1000
+  average_density: 0.14967973856209246
+  bipartite_percentage: 17.7
+  average_bipartiteness: 0.8942321232824463

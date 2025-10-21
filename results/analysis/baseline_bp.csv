@@ -1,0 +1,13 @@
+dataset_name,dataset_file,density,baseline_bp_percent
+8N_Bipartite_Dense,data/raw_data/8N_Bipartite_Dense.pkl,0.3110,25.2555
+8N_Bipartite_Medium,data/raw_data/8N_Bipartite_Medium.pkl,0.2887,32.1442
+8N_Bipartite_Sparse,data/raw_data/8N_Bipartite_Sparse.pkl,0.2256,55.7872
+10N_Bipartite_Dense,data/raw_data/10N_Bipartite_Dense.pkl,0.3470,2.4423
+10N_Bipartite_Medium,data/raw_data/10N_Bipartite_Medium.pkl,0.2307,26.2157
+10N_Bipartite_Sparse,data/raw_data/10N_Bipartite_Sparse.pkl,0.1771,51.8939
+14N_Bipartite_Dense,data/raw_data/14N_Bipartite_Dense.pkl,0.3727,0.0005
+14N_Bipartite_Medium,data/raw_data/14N_Bipartite_Medium.pkl,0.2084,4.2342
+14N_Bipartite_Sparse,data/raw_data/14N_Bipartite_Sparse.pkl,0.1042,62.3975
+18N_Bipartite_Dense,data/raw_data/18N_Bipartite_Dense.pkl,0.3697,0.0000
+18N_Bipartite_Medium,data/raw_data/18N_Bipartite_Medium.pkl,0.1967,0.2060
+18N_Bipartite_Sparse,data/raw_data/18N_Bipartite_Sparse.pkl,0.0747,64.9764

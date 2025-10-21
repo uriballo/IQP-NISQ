@@ -1,174 +1,67 @@
-import networkx as nx
 import numpy as np
-from tqdm import tqdm 
+import networkx as nx
+from pathlib import Path
+from src.utils.utils import vec_to_graph
+from src.datasets.bipartites import BipartiteGraphDataset
 
-# Unchanged function
-def calculate_num_vertices(L: int) -> int:
+NUM_SAMPLES = 1000000 
+TARGET_NODES = {8, 10, 14, 18}  # only these node counts
+
+def compute_baseline_bp(dataset_path: str, density: float, num_samples: int = NUM_SAMPLES) -> float:
     """
-    Calculates the number of vertices N for a graph whose strict upper
-    triangle adjacency matrix has L elements.
-    L = N * (N - 1) / 2  =>  N^2 - N - 2L = 0
-    N = (1 + sqrt(1 + 8L)) / 2 (since N must be positive)
+    Generates random graphs using the dataset's density and computes
+    the bipartite percentage.
     """
-    delta = 1 + 8 * L
-    if delta < 0:
-        raise ValueError(
-            f"L={L} results in a negative discriminant ({delta})."
-        )
-    sqrt_delta = np.sqrt(delta)
-    if not sqrt_delta.is_integer():
-        raise ValueError(
-            f"1 + 8L = {delta} is not a perfect square. "
-            f"L={L} is not a valid length for a strict upper triangle."
-        )
-    num_vertices_float = (1 + sqrt_delta) / 2
-    if not num_vertices_float.is_integer():
-        raise ValueError(
-            f"Number of vertices ({num_vertices_float}) is not an integer. "
-            f"L={L} is not a valid length."
-        )
-    return int(num_vertices_float)
+    dataset = BipartiteGraphDataset(1, 0.1).from_file(dataset_path, verbose=False)
+    N = dataset.nodes
+    L = N * (N - 1) // 2  # strict upper triangle length
 
-DENSITY_REGIMES = {
-    "sparse": (0.05, 0.20),
-    "medium": (0.25, 0.35),
-    "dense": (0.35, 0.55),
-}
+    bipartite_count = 0
+    for _ in range(num_samples):
+        random_vec = (np.random.rand(L) < density).astype(np.uint8)
+        graph = vec_to_graph(random_vec, N)
+        if nx.is_bipartite(graph):
+            bipartite_count += 1
 
-def run_bipartite_benchmark_with_density(
-    bitstring_lengths: list[int],
-    num_samples: int,
-    density_regimes: dict[str, tuple[float, float]],
-):
-    """
-    Runs the benchmark for generating random graphs with varying densities
-    and calculating the percentage of bipartite graphs.
-    """
-    all_results = {}
-    print(
-        f"Starting benchmark: {num_samples} samples per bitstring length "
-        f"per density regime.\n"
-    )
+    return bipartite_count / num_samples * 100  # percentage
 
-    for L in bitstring_lengths:
-        print(f"Processing bitstrings of length L={L}...")
-        current_L_results = {"regimes": {}}
-        all_results[L] = current_L_results
+def run_baseline_bp_for_all_datasets(dataset_summary_path: Path):
+    import yaml
+    with open(dataset_summary_path, "r") as f:
+        datasets = yaml.safe_load(f)
 
-        try:
-            num_vertices = calculate_num_vertices(L)
-            current_L_results["num_vertices"] = num_vertices
-            print(f"  Derived num_vertices = {num_vertices} for L={L}")
-        except ValueError as e:
-            error_msg = f"Error calculating num_vertices for L={L}: {e}"
-            print(f"  {error_msg}")
-            current_L_results["error"] = error_msg
-            current_L_results["num_vertices"] = None
-            print("-" * 60)
-            continue  # to next L
-
-        for regime_name, (p_low, p_high) in density_regimes.items():
-            print(
-                f"  Testing density regime: '{regime_name}' "
-                f"(p_edge in [{p_low:.2f}, {p_high:.2f}])"
-            )
-            bipartite_count = 0
-            regime_results_data = {}
-            current_L_results["regimes"][regime_name] = regime_results_data
-
-            try:
-                # Use tqdm for a progress bar.
-                for _ in tqdm(
-                    range(num_samples),
-                    desc=(
-                        f"    L={L}, N={num_vertices}, {regime_name:<7}"
-                    ), # Pad regime_name
-                    unit="graphs",
-                    leave=False, # Keep bar until regime finishes
-                ):
-                    # 1. Sample a p_edge for this specific graph instance
-                    p_edge = np.random.uniform(p_low, p_high)
-
-                    # 2. Generate bitstring based on this p_edge
-                    random_vec = (np.random.rand(L) < p_edge).astype(
-                        np.uint8
-                    )
-
-                    graph = vec_to_graph(random_vec, num_vertices)
-                    if nx.is_bipartite(graph):
-                        bipartite_count += 1
-
-                percentage_bipartite = (
-                    bipartite_count / num_samples
-                ) * 100
-                regime_results_data.update({
-                    "p_range": (p_low, p_high),
-                    "bipartite_count": bipartite_count,
-                    "total_samples": num_samples,
-                    "percentage": percentage_bipartite,
-                })
-                print( # This print will appear after tqdm bar for the regime finishes
-                    f"    For L={L} (N={num_vertices}), regime '{regime_name}': "
-                    f"{bipartite_count}/{num_samples} graphs are bipartite."
-                )
-                print(
-                    f"    Percentage of bipartite graphs: {percentage_bipartite:.4f}%"
-                )
-
-            except Exception as e:
-                error_msg = (
-                    f"An error occurred during graph processing for L={L}, "
-                    f"regime '{regime_name}': {e}"
-                )
-                print(f"    {error_msg}") # Will print above tqdm if error is early
-                regime_results_data["error"] = error_msg
-            
-            print("  " + "-" * 50)  # Separator between regimes
-        print("-" * 60)  # Separator between L values
-
-    print("\n--- Benchmark Summary ---")
-    for L, L_data in all_results.items():
-        N_val = L_data.get("num_vertices")
-        N_str = str(N_val) if N_val is not None else "N/A (calc error)"
-
-        if "error" in L_data and L_data.get("num_vertices") is None:
-            print(f"L={L}: {L_data['error']}")
+    results = {}
+    for ds in datasets:
+        # Only bipartite datasets with target node counts
+        if ds["graph_type"] != "Bipartite" or ds["nodes"] not in TARGET_NODES:
             continue
 
-        print(f"Results for L={L} (N={N_str}):")
+        name = ds["name"]
+        node_count = ds["nodes"]
+        density_category = ds["density_category"]
+        density = ds["average_density"]
 
-        for regime_name, regime_res in L_data.get("regimes", {}).items():
-            if "error" in regime_res:
-                print(
-                    f"  Regime '{regime_name}': Error - {regime_res['error']}"
-                )
-            else:
-                perc = regime_res.get("percentage", "N/A")
-                p_range_str = "N/A"
-                if "p_range" in regime_res:
-                    p_range_str = (
-                        f"[{regime_res['p_range'][0]:.2f}, "
-                        f"{regime_res['p_range'][1]:.2f}]"
-                    )
+        dataset_file = f"data/raw_data/{node_count}N_Bipartite_{density_category}.pkl"
+        dataset_file_path = Path(dataset_file)
+        if not dataset_file_path.exists():
+            print(f"[WARNING] Dataset file not found: {dataset_file}")
+            continue
 
-                perc_str = (
-                    f"{perc:.4f}%" if isinstance(perc, float) else str(perc)
-                )
-                print(
-                    f"  Regime '{regime_name}' (p_edge in {p_range_str}): "
-                    f"{perc_str} bipartite"
-                )
-    print("-" * 60)
+        bp_percent = compute_baseline_bp(str(dataset_file_path), density)
+        results[name] = {
+            "dataset_file": dataset_file,
+            "density": density,
+            "baseline_bp_percent": bp_percent,
+        }
+        print(f"{name}: Baseline BP% = {bp_percent:.2f}%")
 
+    return results
 
 if __name__ == "__main__":
-    BITSTRING_LENGTHS = [45, 91, 153]  # N=10, N=14, N=18
-    NUM_SAMPLES = 100_000
+    dataset_summary_path = Path("data/datasets_summary.yml")
+    baseline_results = run_baseline_bp_for_all_datasets(dataset_summary_path)
 
-    # Note: The tqdm library provides a progress bar.
-    # If you don't have it, you can install it (`pip install tqdm`)
-    # or remove its usage from the run_bipartite_benchmark_with_density function.
-
-    run_bipartite_benchmark_with_density(
-        BITSTRING_LENGTHS, NUM_SAMPLES, DENSITY_REGIMES
-    )
+    import pandas as pd
+    df = pd.DataFrame.from_dict(baseline_results, orient="index")
+    df.to_csv("results/analysis/baseline_bp.csv", index_label="dataset_name", float_format="%.4f")
+    print("[INFO] Baseline bipartite percentages saved to results/analysis/baseline_bp.csv")
