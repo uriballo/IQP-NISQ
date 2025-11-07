@@ -1,0 +1,13 @@
+dataset_name,baseline_bp_percent,baseline_bipartivity,mmd,dataset_file
+8N_Bipartite_Dense,26.953125,0.898074,0.09066226034381397,data/raw_data/8N_Bipartite_Dense.pkl
+8N_Bipartite_Medium,29.296875,0.909525,0.07821124398655299,data/raw_data/8N_Bipartite_Medium.pkl
+8N_Bipartite_Sparse,53.320312,0.952820,0.06485282749018262,data/raw_data/8N_Bipartite_Sparse.pkl
+10N_Bipartite_Dense,1.562500,0.803204,0.12664866108612155,data/raw_data/10N_Bipartite_Dense.pkl
+10N_Bipartite_Medium,25.390625,0.919238,0.06206029563908033,data/raw_data/10N_Bipartite_Medium.pkl
+10N_Bipartite_Sparse,52.148438,0.959505,0.04538140248079714,data/raw_data/10N_Bipartite_Sparse.pkl
+14N_Bipartite_Dense,0.000000,0.645288,0.1625104083041815,data/raw_data/14N_Bipartite_Dense.pkl
+14N_Bipartite_Medium,4.492188,0.877648,0.05732801630855455,data/raw_data/14N_Bipartite_Medium.pkl
+14N_Bipartite_Sparse,64.453125,0.978753,0.023286768110614142,data/raw_data/14N_Bipartite_Sparse.pkl
+18N_Bipartite_Dense,0.000000,0.566347,0.17685425528010856,data/raw_data/18N_Bipartite_Dense.pkl
+18N_Bipartite_Medium,0.195312,0.829327,0.05715124022484075,data/raw_data/18N_Bipartite_Medium.pkl
+18N_Bipartite_Sparse,62.304688,0.983081,0.017337998785227904,data/raw_data/18N_Bipartite_Sparse.pkl

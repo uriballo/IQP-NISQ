@@ -1,0 +1,7 @@
+dataset_name,density,ref_density,ref_bipartite_percent,ref_bipartivity,gen_density,gen_bipartite_percent,gen_bipartivity,path,num_samples,mmd,memorized,diversity
+8N_Bipartite_Dense,Dense,0.311,100,1,0.2403,63.0859,0.9606,results/simulation_results/8N_Bipartite/run_20250715_165138/Dense/simulated_samples_20250721.npy,512,0.039899806,0.4531,0.3594
+8N_Bipartite_Medium,Medium,0.2887,100,1,0.2704,52.1484,0.9461,results/simulation_results/8N_Bipartite/run_20250715_165138/Medium/simulated_samples_20250721.npy,512,0.027007113,0.5195,0.4648
+8N_Bipartite_Sparse,Sparse,0.2256,100,1,0.2255,69.3359,0.973,results/simulation_results/8N_Bipartite/run_20250715_165138/Sparse/simulated_samples_20250721.npy,512,0.005065055,0.6328,0.2656
+8N_ER_Dense,Dense,0.7618,0,1,0.7003,0,0.5861,results/simulation_results/8N_ER/run_20250709_142102/Dense/simulated_samples_20250721.npy,512,0.00982354,0.4004,0.6152
+8N_ER_Medium,Medium,0.442,0.5,1,0.461,3.125,0.7701,results/simulation_results/8N_ER/run_20250709_142102/Medium/simulated_samples_20250721.npy,512,-0.00051287,0.0312,0.9629
+8N_ER_Sparse,Sparse,0.2207,51.5,1,0.2862,31.8359,0.9094,results/simulation_results/8N_ER/run_20250709_142102/Sparse/simulated_samples_20250721.npy,512,0.010254249,0.4199,0.5645
