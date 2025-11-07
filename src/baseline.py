@@ -2,28 +2,31 @@ import numpy as np
 import networkx as nx
 from pathlib import Path
 from src.utils.utils import vec_to_graph
+from src.utils.metrics import estrada_bipartivity
 from src.datasets.bipartites import BipartiteGraphDataset
 
 NUM_SAMPLES = 1000000 
-TARGET_NODES = {8, 10, 14, 18}  # only these node counts
+TARGET_NODES = {8, 10, 14, 18} 
 
-def compute_baseline_bp(dataset_path: str, density: float, num_samples: int = NUM_SAMPLES) -> float:
+def compute_baseline(dataset_path: str, density: float, num_samples: int = NUM_SAMPLES) -> float:
     """
     Generates random graphs using the dataset's density and computes
     the bipartite percentage.
     """
-    dataset = BipartiteGraphDataset(1, 0.1).from_file(dataset_path, verbose=False)
+    dataset = BipartiteGraphDataset(1, 0.1).from_file(dataset_path, verbose=True)
     N = dataset.nodes
     L = N * (N - 1) // 2  # strict upper triangle length
 
     bipartite_count = 0
+    bipartivity_count = 0.0
     for _ in range(num_samples):
         random_vec = (np.random.rand(L) < density).astype(np.uint8)
         graph = vec_to_graph(random_vec, N)
         if nx.is_bipartite(graph):
             bipartite_count += 1
+        bipartivity_count += estrada_bipartivity(graph)
 
-    return bipartite_count / num_samples * 100  # percentage
+    return (bipartite_count / num_samples) * 100, bipartivity_count / num_samples  
 
 def run_baseline_bp_for_all_datasets(dataset_summary_path: Path):
     import yaml
@@ -47,13 +50,15 @@ def run_baseline_bp_for_all_datasets(dataset_summary_path: Path):
             print(f"[WARNING] Dataset file not found: {dataset_file}")
             continue
 
-        bp_percent = compute_baseline_bp(str(dataset_file_path), density)
+        bp_percent, bipartivity = compute_baseline(str(dataset_file_path), density)
+
         results[name] = {
             "dataset_file": dataset_file,
             "density": density,
             "baseline_bp_percent": bp_percent,
+            "baseline_bipartivity": bipartivity
         }
-        print(f"{name}: Baseline BP% = {bp_percent:.2f}%")
+        print(f"{name}: Baseline BP% = {bp_percent:.2f}%, Bipartivity: {bipartivity:.2f}")
 
     return results
 

@@ -20,6 +20,11 @@ def select_best_runs_from_df(df: pd.DataFrame, summary: dict) -> pd.DataFrame:
 
     # Ensure dataset_name is string, not tuple
     df["dataset_name"] = df["dataset_name"].astype(str).str.strip()
+    df = df.copy()
+
+    # Compute all metrics for all rows
+    df["density_error"] = (df["gen_density"] - df["ref_density"]).abs()
+    df["density_rel_error"] = df["density_error"] / df["ref_density"] * 100
 
     for dataset_instance, group in df.groupby("dataset_name"):
         if dataset_instance not in summary:
@@ -29,12 +34,13 @@ def select_best_runs_from_df(df: pd.DataFrame, summary: dict) -> pd.DataFrame:
         graph_type = summary[dataset_instance]["graph_type"]
 
         if graph_type == "ErdosRenyi":
-            group = group.copy()
-            group["density_error"] = (group["gen_density"] - group["ref_density"]).abs()
+            # Select row with minimum absolute density error
             best_row = group.loc[group["density_error"].idxmin()]
         elif graph_type == "Bipartite":
+            # Select row with maximum bipartite percent
             best_row = group.loc[group["gen_bipartite_percent"].idxmax()]
         else:
+            print(f"[WARNING] Unknown graph type {graph_type} for dataset {dataset_instance}, skipping.")
             continue
 
         best_rows.append(best_row)
@@ -45,7 +51,7 @@ if __name__ == "__main__":
     summary_path = Path("data/datasets_summary.yml")
     dataset_summary = load_dataset_summary(summary_path)
 
-    analysis_dir = Path("results/analysis")
+    analysis_dir = Path("results/analysis/nisq")
     all_dfs = [pd.read_csv(f) for f in analysis_dir.glob("analysis_*.csv")]
 
     if not all_dfs:
