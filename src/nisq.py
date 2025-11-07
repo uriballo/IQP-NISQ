@@ -1,4 +1,3 @@
-# evaluate_on_nisq.py
 import argparse
 import logging
 import os
