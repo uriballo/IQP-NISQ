@@ -22,22 +22,7 @@ def estrada_bipartivity(graph):
         Bipartivity index in [0, 1].
         1 means perfectly bipartite; smaller means less bipartite.
     """
-    if not isinstance(graph, nx.Graph):
-        raise TypeError("Input must be a NetworkX Graph.")
-        
-    # Adjacency matrix
-    A = nx.to_numpy_array(graph)
-    # Eigenvalues (symmetric matrix)
-    eigvals = np.linalg.eigvalsh(A)
-    
-    # Numerator: sum of cosh(λ_j)
-    numerator = np.sum(np.cosh(eigvals))
-    # Denominator: sum of cosh(λ_j) + sinh(λ_j) = sum(e^λ)
-    denominator = np.sum(np.exp(eigvals))
-    
-    beta = numerator / denominator
-    
-    return beta
+    return nx.bipartite.spectral_bipartivity(graph)
 
 def compute_average_density(samples):
     return np.mean([nx.density(graph) for graph in samples])
