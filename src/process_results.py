@@ -116,8 +116,8 @@ def process_all_runs(
 
 if __name__ == "__main__":
     summary_path = Path("data/datasets_summary.yml")
-    results_base_dir = Path("results/simulation_results")
-    out_dir = Path("results/analysis/simulations")
+    results_base_dir = Path("results/evaluation_results")
+    out_dir = Path("results/analysis/nisq")
 
     all_df, grouped_by_nodes, dataset_summary = process_all_runs(
         summary_path, results_base_dir, out_dir
